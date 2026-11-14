@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LogOut,
   CheckCircle2,
@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   Edit3,
   Check,
+  Minus,
 } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 import {
@@ -16,6 +17,9 @@ import {
   type IndicationGroup,
   type IndicationItem,
 } from './data/indicationGroups';
+import { BINDING_BY_ITEM_ID, toAlertStatus } from './data/indicatorBindings';
+import { healthApi, ApiError } from './api/healthApi';
+import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
 import { ModelPanel } from './components/ModelPanel';
 
@@ -25,11 +29,34 @@ interface IndicationsPageProps {
 }
 
 export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogout }) => {
-  const [groups, setGroups] = useState<IndicationGroup[]>(INITIAL_INDICATION_GROUPS);
+  const { snapshot, error, loading, refresh } = useHealthData();
   const [selectedRegion, setSelectedRegion] = useState<BodyRegion | 'ALL'>('ALL');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draftValue, setDraftValue] = useState<string>('');
+  const [draftValues, setDraftValues] = useState<Record<string, string>>({});
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Card content with the backend's rating and newest values filled in.
+  const groups = useMemo<IndicationGroup[]>(
+    () =>
+      INITIAL_INDICATION_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.map((item) => {
+          const binding = BINDING_BY_ITEM_ID[item.id];
+          const result = snapshot?.statuses[binding.indicatorId];
+          const values = snapshot?.latestValues[binding.indicatorId];
+          return {
+            ...item,
+            status: toAlertStatus(result?.status),
+            message: result?.message,
+            currentValue: values ? binding.format(values) : '—',
+            privateSurgeonFlag: item.id === 'mood-stress' && result?.escalate === true,
+          };
+        }),
+      })),
+    [snapshot],
+  );
 
   const allItems = groups.flatMap((g) => g.items);
 
@@ -45,65 +72,53 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     }
   }, [selectedRegion]);
 
-  // Basic alert evaluation logic matching the 10-indicator spec
-  const evaluateAlert = (item: IndicationItem, rawVal: string): Partial<IndicationItem> => {
-    const num = parseFloat(rawVal);
-    if (item.id === 'spo2' && !isNaN(num)) {
-      return {
-        status: num < 92 ? 'critical' : num < 95 ? 'warning' : 'nominal',
-      };
-    }
-    if (item.id === 'resting-hr' && !isNaN(num)) {
-      return {
-        status: num > 100 || num < 45 ? 'critical' : num > 85 ? 'warning' : 'nominal',
-      };
-    }
-    if (item.id === 'body-temp' && !isNaN(num)) {
-      return {
-        status: num >= 38.0 ? 'critical' : num >= 37.2 ? 'warning' : 'nominal',
-      };
-    }
-    if (item.id === 'cabin-co2' && !isNaN(num)) {
-      return {
-        status: num > 5.0 ? 'critical' : num > 3.5 ? 'warning' : 'nominal',
-      };
-    }
-    if (item.id === 'radiation-dose' && !isNaN(num)) {
-      return {
-        status: num >= 600 ? 'critical' : num >= 450 ? 'warning' : 'nominal',
-      };
-    }
-    if (item.id === 'mood-stress' && !isNaN(num)) {
-      const isLow = num <= 12;
-      return {
-        status: isLow ? 'critical' : num <= 15 ? 'warning' : 'nominal',
-        privateSurgeonFlag: isLow,
-      };
-    }
-    return {};
-  };
-
   const handleStartEdit = (item: IndicationItem) => {
+    const binding = BINDING_BY_ITEM_ID[item.id];
+    const empty: Record<string, string> = {};
+    binding.fields.forEach((field) => {
+      empty[field.key] = '';
+    });
+    setDraftValues(empty);
+    setEditError(null);
     setEditingId(item.id);
-    setDraftValue(item.currentValue);
   };
 
-  const handleSaveEdit = (groupId: string, item: IndicationItem) => {
-    const updatedFields = evaluateAlert(item, draftValue);
-    setGroups((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        return {
-          ...g,
-          items: g.items.map((it) =>
-            it.id === item.id
-              ? { ...it, currentValue: draftValue || it.currentValue, ...updatedFields }
-              : it
-          ),
-        };
-      })
-    );
+  const handleCancelEdit = () => {
     setEditingId(null);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (item: IndicationItem) => {
+    const binding = BINDING_BY_ITEM_ID[item.id];
+
+    // Check the typed numbers here; the backend checks the allowed ranges.
+    const values: Record<string, number> = {};
+    for (const field of binding.fields) {
+      const raw = (draftValues[field.key] ?? '').trim();
+      if (raw === '') {
+        if (field.optional) continue;
+        setEditError(`Enter ${field.label}.`);
+        return;
+      }
+      const num = Number(raw);
+      if (!Number.isFinite(num)) {
+        setEditError(`${field.label} must be a number.`);
+        return;
+      }
+      values[field.key] = num;
+    }
+
+    setSaving(true);
+    setEditError(null);
+    try {
+      await healthApi.postReading({ indicatorId: binding.indicatorId, values });
+      setEditingId(null);
+      await refresh();
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : 'Could not save the reading.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderStatusBadge = (status: AlertStatus, privateFlag?: boolean) => {
@@ -117,14 +132,22 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     }
     if (status === 'warning') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5" />
           Trend Watch
         </span>
       );
     }
+    if (status === 'unknown') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-300">
+          <Minus className="w-3.5 h-3.5" />
+          No data
+        </span>
+      );
+    }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300">
         <CheckCircle2 className="w-3.5 h-3.5" />
         Nominal
       </span>
@@ -132,7 +155,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
   };
 
   const nominalCount = allItems.filter((i) => i.status === 'nominal').length;
-  const attentionCount = allItems.length - nominalCount;
+  const alertCount = allItems.filter((i) => i.status === 'warning' || i.status === 'critical').length;
 
   return (
     <div className="starfield min-h-screen text-slate-200 flex flex-col">
@@ -159,8 +182,12 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
           <div className="flex items-center gap-3 sm:gap-5">
             <div className="hidden sm:flex items-center gap-4 text-xs font-mono">
               <span className="text-emerald-400">NOMINAL: {nominalCount}/10</span>
-              {attentionCount > 0 && (
-                <span className="text-red-400">ALERTS: {attentionCount}</span>
+              {alertCount > 0 && <span className="text-red-400">ALERTS: {alertCount}</span>}
+              {snapshot && (
+                <>
+                  <span className="hidden md:inline text-slate-300">STREAK: {snapshot.streak}d</span>
+                  <span className="hidden md:inline text-slate-300">POINTS: {snapshot.points}</span>
+                </>
               )}
             </div>
 
@@ -174,6 +201,23 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
           </div>
         </div>
       </header>
+
+      {/* Backend status message */}
+      {(error || loading) && (
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6">
+          {error ? (
+            <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-slate-200 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-danger block">Backend not available</span>
+                {error} Values and statuses are not shown until it is running again.
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400">Loading readings…</p>
+          )}
+        </div>
+      )}
 
       {/* Main Content Layout */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
@@ -221,6 +265,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {visibleItems.map((item) => {
                     const isEditing = editingId === item.id;
+                    const binding = BINDING_BY_ITEM_ID[item.id];
 
                     return (
                       <article
@@ -244,36 +289,62 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                           {renderStatusBadge(item.status, item.privateSurgeonFlag)}
                         </div>
 
-                        {/* Value & Quick Log Input */}
+                        {/* Value & Log input */}
                         <div className="mt-3 p-3 rounded-lg bg-white/5 flex items-center justify-between gap-2">
                           {isEditing ? (
-                            <div className="flex items-center gap-2 w-full">
-                              <input
-                                type="text"
-                                value={draftValue}
-                                onChange={(e) => setDraftValue(e.target.value)}
-                                placeholder={item.inputLabel}
-                                autoFocus
-                                className="w-full px-2.5 py-1.5 text-sm font-mono bg-panel border border-brand rounded-md focus:outline-none"
-                              />
-                              <button
-                                onClick={() => handleSaveEdit(group.id, item)}
-                                className="p-1.5 rounded-md bg-brand text-white hover:bg-brand-dark cursor-pointer"
-                                title="Save reading"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
+                            <div className="w-full space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {binding.fields.map((field) => (
+                                  <label
+                                    key={field.key}
+                                    className="flex flex-col gap-1 text-[11px] text-slate-400"
+                                  >
+                                    {field.label}
+                                    {field.optional && ' (optional)'}
+                                    <input
+                                      type="number"
+                                      inputMode="decimal"
+                                      min={field.min}
+                                      max={field.max}
+                                      step={field.step}
+                                      value={draftValues[field.key] ?? ''}
+                                      onChange={(e) =>
+                                        setDraftValues((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value,
+                                        }))
+                                      }
+                                      className="px-2.5 py-1.5 text-sm font-mono text-slate-200 bg-panel border border-brand rounded-md focus:outline-none"
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                              {editError && <p className="text-xs text-red-300">{editError}</p>}
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEdit}
+                                  className="px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={saving}
+                                  onClick={() => handleSaveEdit(item)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-brand text-white text-xs font-medium hover:bg-brand-dark cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                                  title="Save reading"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  {saving ? 'Saving…' : 'Save reading'}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <>
                               <div>
                                 <div className="text-xl font-bold font-mono text-slate-200">
-                                  {item.currentValue}{' '}
-                                  {!item.currentValue.includes(item.unit) && (
-                                    <span className="text-xs font-normal text-slate-400">
-                                      {item.unit}
-                                    </span>
-                                  )}
+                                  {item.currentValue}
                                 </div>
                                 <div className="text-[11px] text-slate-400">
                                   Baseline: {item.baseline}
@@ -291,6 +362,11 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                           )}
                         </div>
 
+                        {/* Backend explanation of the latest rating */}
+                        {item.message && (
+                          <p className="mt-2 text-xs text-slate-200">{item.message}</p>
+                        )}
+
                         {/* Hazard & Alert Logic Metadata */}
                         <div className="mt-3 space-y-1 text-xs text-slate-400">
                           <p>
@@ -300,11 +376,6 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                             <span className="font-semibold text-slate-200">Alert logic:</span>{' '}
                             {item.alertLogic}
                           </p>
-                          {item.trendNote && (
-                            <p className="text-[11px] font-mono text-brand-light pt-1">
-                              ↳ {item.trendNote}
-                            </p>
-                          )}
                         </div>
                       </article>
                     );

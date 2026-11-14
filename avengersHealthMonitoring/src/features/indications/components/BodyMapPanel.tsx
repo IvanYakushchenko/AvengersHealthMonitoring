@@ -1,6 +1,11 @@
 import React from 'react';
 import { ShieldAlert, Radio } from 'lucide-react';
-import { type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups';
+import {
+  aggregateStatus,
+  type AlertStatus,
+  type BodyRegion,
+  type IndicationItem,
+} from '../data/indicationGroups';
 
 interface BodyMapPanelProps {
   items: IndicationItem[];
@@ -13,12 +18,8 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
   selectedRegion,
   onSelectRegion,
 }) => {
-  const getRegionStatus = (region: BodyRegion): AlertStatus => {
-    const regionItems = items.filter((i) => i.region === region);
-    if (regionItems.some((i) => i.status === 'critical')) return 'critical';
-    if (regionItems.some((i) => i.status === 'warning')) return 'warning';
-    return 'nominal';
-  };
+  const getRegionStatus = (region: BodyRegion): AlertStatus =>
+    aggregateStatus(items.filter((i) => i.region === region));
 
   const habitatStatus = getRegionStatus('Habitat panel');
 
@@ -65,6 +66,8 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
               className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
                 habitatStatus === 'nominal'
                   ? 'bg-emerald-500/20 text-emerald-300'
+                  : habitatStatus === 'unknown'
+                  ? 'bg-slate-500/20 text-slate-300'
                   : 'bg-danger/30 text-red-200'
               }`}
             >

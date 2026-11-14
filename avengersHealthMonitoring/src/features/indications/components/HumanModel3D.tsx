@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import type { AlertStatus, BodyRegion, IndicationItem } from '../data/indicationGroups'
+import { aggregateStatus, type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups'
 import { regionForMeshName } from './regionMapping'
 
 // Anatomy study models (muscular system), one per body type.
@@ -20,12 +20,14 @@ const STATUS_COLOR: Record<AlertStatus, number> = {
   nominal: 0x10b981,
   warning: 0xf59e0b,
   critical: 0xc62828,
+  unknown: 0x64748b,
 }
 
 const STATUS_EMISSIVE: Record<AlertStatus, number> = {
   nominal: 0x000000,
   warning: 0x6b4a00,
   critical: 0x6b0000,
+  unknown: 0x000000,
 }
 
 interface HumanModel3DProps {
@@ -47,10 +49,7 @@ interface Hotspot {
 }
 
 function regionStatus(items: IndicationItem[], region: BodyRegion): AlertStatus {
-  const regional = items.filter((i) => i.region === region)
-  if (regional.some((i) => i.status === 'critical')) return 'critical'
-  if (regional.some((i) => i.status === 'warning')) return 'warning'
-  return 'nominal'
+  return aggregateStatus(items.filter((i) => i.region === region))
 }
 
 // Positions for the hotspots as fractions of the body's height and width,

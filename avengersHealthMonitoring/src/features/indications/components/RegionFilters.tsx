@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react';
-import type { AlertStatus, BodyRegion, IndicationItem } from '../data/indicationGroups';
+import { aggregateStatus, type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups';
 
 const REGIONS: { id: BodyRegion; label: string }[] = [
   { id: 'Head', label: 'Head (Sleep / Mood)' },
@@ -17,11 +17,15 @@ interface RegionFiltersProps {
 }
 
 function regionStatus(items: IndicationItem[], region: BodyRegion): AlertStatus {
-  const regional = items.filter((i) => i.region === region);
-  if (regional.some((i) => i.status === 'critical')) return 'critical';
-  if (regional.some((i) => i.status === 'warning')) return 'warning';
-  return 'nominal';
+  return aggregateStatus(items.filter((i) => i.region === region));
 }
+
+const DOT_CLASS: Record<AlertStatus, string> = {
+  critical: 'bg-danger',
+  warning: 'bg-amber-500',
+  nominal: 'bg-emerald-500',
+  unknown: 'bg-slate-500',
+};
 
 // Region quick-select buttons, shown under the 3D model.
 export function RegionFilters({ items, selectedRegion, onSelectRegion }: RegionFiltersProps) {
@@ -44,9 +48,7 @@ export function RegionFilters({ items, selectedRegion, onSelectRegion }: RegionF
               <span className="truncate">{reg.label}</span>
             </span>
             <span
-              className={`h-2 w-2 shrink-0 rounded-full ${
-                status === 'critical' ? 'bg-danger' : status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
-              }`}
+              className={`h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[status]}`}
             />
           </button>
         );
