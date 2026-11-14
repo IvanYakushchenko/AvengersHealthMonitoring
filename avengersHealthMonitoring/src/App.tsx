@@ -1,14 +1,16 @@
+import { useState } from 'react'
 import './App.css'
+import { LoginPage } from './features/login'
+import { IndicationsPage } from './features/indications'
 
 function App() {
+  const [user, setUser] = useState<string | null>(null)
 
-  return (
-    <>
-      <section className="bg-red-800 min-h-screen w-full flex-1 flex flex-col">
+  if (!user) {
+    return <LoginPage onLogin={setUser} />
+  }
 
-      </section>
-    </>
-  )
+  return <IndicationsPage onLogout={() => setUser(null)} />
 }
 
 export default App
