@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HumanModel3D, MODEL_FILES, type BodySex } from './HumanModel3D';
 import type { BodyRegion, IndicationItem } from '../data/indicationGroups';
+import { RegionFilters } from './RegionFilters';
 
 interface ModelPanelProps {
   items: IndicationItem[];
@@ -55,6 +56,9 @@ export function ModelPanel(props: ModelPanelProps) {
       <p className="mb-2 text-[11px] text-slate-400">Click a marker to filter by body region</p>
       {/* key remounts the 3D view when the body type changes */}
       <HumanModel3D key={sex} sex={sex} {...props} />
+      <div className="mt-3">
+        <RegionFilters items={props.items} selectedRegion={props.selectedRegion} onSelectRegion={props.onSelectRegion} />
+      </div>
     </aside>
   );
 }

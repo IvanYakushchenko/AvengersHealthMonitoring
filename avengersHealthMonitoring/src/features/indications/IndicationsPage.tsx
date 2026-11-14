@@ -140,7 +140,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
       <header className="bg-night/80 backdrop-blur text-slate-200 border-b border-white/10 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/mission-logo.png" alt="" className="w-10 h-10" />
+            <img src="/mission-logo.png" alt="" className="w-10 h-10 rounded-full object-cover scale-110 ring-1 ring-white/10" />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-sm sm:text-base tracking-tight">
