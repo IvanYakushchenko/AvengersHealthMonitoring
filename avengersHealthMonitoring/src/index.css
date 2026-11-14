@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+@theme {
+  --color-brand: #0b3d91;        /* NASA blue: primary actions, accents */
+  --color-brand-dark: #082c6b;   /* hover / pressed */
+  --color-brand-light: #5b8fd6;  /* highlights on dark backgrounds */
+  --color-ink: #0a0c10;          /* near-black: header, login background */
+  --color-ink-soft: #161a22;     /* cards on dark backgrounds */
+  --color-surface: #f3f5f9;      /* page background on light screens */
+  --color-danger: #c62828;       /* error messages */
+}

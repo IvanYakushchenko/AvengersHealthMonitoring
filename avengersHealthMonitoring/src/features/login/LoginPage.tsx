@@ -22,12 +22,12 @@ function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-slate-100 p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-ink p-4">
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-8 shadow-md"
       >
-        <h1 className="text-center text-2xl font-semibold text-slate-800">Sign in</h1>
+        <h1 className="text-center text-2xl font-semibold text-ink">Sign in</h1>
 
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           Username
@@ -35,7 +35,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-red-800"
+            className="rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-brand"
             autoComplete="username"
           />
         </label>
@@ -46,16 +46,16 @@ function LoginPage({ onLogin }: LoginPageProps) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-red-800"
+            className="rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-brand"
             autoComplete="current-password"
           />
         </label>
 
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         <button
           type="submit"
-          className="flex items-center justify-center gap-2 rounded-md bg-red-800 px-4 py-2 font-medium text-white hover:bg-red-900"
+          className="flex items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark"
         >
           <LogIn size={18} />
           Log in
