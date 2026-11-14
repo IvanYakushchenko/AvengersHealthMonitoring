@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { animate, stagger } from 'animejs'
 import { Eye, EyeOff, Loader2, LogIn, Lock, User } from 'lucide-react'
+import NasaLogo from './components/NasaLogo'
+import Heartbeat from './components/Heartbeat'
 
 type LoginPageProps = {
   onLogin: (username: string) => void
@@ -101,16 +103,19 @@ function LoginPage({ onLogin }: LoginPageProps) {
     }`
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-ink p-4">
+    <div className="starfield relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-ink p-4">
       <form
         ref={cardRef}
         onSubmit={handleSubmit}
         noValidate
         className="flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-8 shadow-md"
       >
-        <h1 data-anim className="text-center text-2xl font-semibold text-ink">
-          Sign in
-        </h1>
+        <div data-anim className="flex flex-col items-center gap-2">
+          <NasaLogo className="h-16 w-16" />
+          <h1 className="text-center text-2xl font-semibold text-ink">Astronaut Health Monitor</h1>
+          <p className="text-center text-xs uppercase tracking-widest text-brand">Mission crew sign in</p>
+          <Heartbeat />
+        </div>
 
         <div data-anim className="flex flex-col gap-1 text-sm text-slate-700">
           <label htmlFor="username">Username</label>
@@ -185,6 +190,9 @@ function LoginPage({ onLogin }: LoginPageProps) {
           {loading ? 'Signing in…' : 'Log in'}
         </button>
       </form>
+      <p className="absolute bottom-3 text-center text-xs text-slate-400">
+        Space Apps prototype · not an official NASA product
+      </p>
     </div>
   )
 }

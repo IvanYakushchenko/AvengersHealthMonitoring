@@ -9,3 +9,16 @@
   --color-surface: #f3f5f9;      /* page background on light screens */
   --color-danger: #c62828;       /* error messages */
 }
+
+/* Starfield background for the login screen */
+.starfield {
+  background-color: var(--color-ink);
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #ffffff 40%, transparent 41%),
+    radial-gradient(1px 1px at 78% 12%, #ffffff 40%, transparent 41%),
+    radial-gradient(1.5px 1.5px at 35% 72%, #c9dcff 40%, transparent 41%),
+    radial-gradient(1px 1px at 88% 66%, #ffffff 40%, transparent 41%),
+    radial-gradient(1px 1px at 52% 40%, #ffffff 40%, transparent 41%),
+    radial-gradient(1.5px 1.5px at 22% 90%, #c9dcff 40%, transparent 41%),
+    radial-gradient(ellipse at 50% 120%, rgb(11 61 145 / 0.45), transparent 60%);
+}
