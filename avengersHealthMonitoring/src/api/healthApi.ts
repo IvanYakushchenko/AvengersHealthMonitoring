@@ -1,0 +1,218 @@
+// Typed client for the AvengersHealthMonitoring backend (its README lists every endpoint).
+
+// Backend ratings. The indications page maps them to its own AlertStatus values.
+export type BackendStatus = 'normal' | 'caution' | 'urgent' | 'unknown';
+
+export interface StatusResult {
+  indicatorId: string;
+  status: BackendStatus;
+  message: string;
+  escalate: boolean;
+}
+
+export interface RegionStatus {
+  regionId: string;
+  status: BackendStatus;
+  indicators: StatusResult[];
+}
+
+export interface StatusOverview {
+  regions: RegionStatus[];
+}
+
+// A saved reading. The id is needed to correct or delete it.
+export interface Reading {
+  id: number;
+  indicatorId: string;
+  values: Record<string, number>;
+  takenAt: string;
+}
+
+export interface NewReading {
+  indicatorId: string;
+  values: Record<string, number>;
+  takenAt?: string;
+}
+
+export interface Checklist {
+  items: { indicatorId: string; due: boolean; lastTakenAt: string | null }[];
+  streak: number;
+  points: number;
+}
+
+export interface ValueRule {
+  limits: [number, number];
+  normal: [number, number];
+  caution: [number, number];
+  optional: boolean;
+  wholeNumber: boolean;
+}
+
+export interface IndicatorInfo {
+  indicatorId: string;
+  region: string;
+  dueEveryHours: number;
+  values: Record<string, ValueRule>;
+}
+
+// Crew sex picks the 3D body model. Mission control accounts have none (null).
+export type Sex = 'male' | 'female';
+
+// Answer of POST /api/login. Keep the token and send it with every other request.
+export interface Session {
+  token: string;
+  astronautId: number;
+  username: string;
+  isAdmin: boolean;
+  sex: Sex | null;
+}
+
+// One crew account as mission control sees it.
+export interface CrewMember {
+  astronautId: number;
+  username: string;
+  sex: Sex;
+  createdAt: string;
+  status: BackendStatus;
+  alertCount: number;
+}
+
+// Shown in the UI when the backend cannot be reached or rejects a request.
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export const isUnauthorized = (err: unknown) => err instanceof ApiError && err.status === 401;
+
+const API_BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+
+interface RequestOptions {
+  token?: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  body?: unknown;
+}
+
+async function request<T>(path: string, { token, method = 'GET', body }: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(`Cannot reach the backend at ${API_BASE}. Is it running?`, 0);
+  }
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status}).`;
+    try {
+      const data: unknown = await res.json();
+      if (data && typeof data === 'object' && 'detail' in data) {
+        const detail = (data as { detail: unknown }).detail;
+        if (typeof detail === 'string') message = detail;
+        else if (Array.isArray(detail) && detail.length > 0) message = 'Please check the values you entered.';
+      }
+    } catch {
+      // Not JSON: keep the generic message.
+    }
+    throw new ApiError(message, res.status);
+  }
+
+  return (await res.json()) as T;
+}
+
+// ---------- accounts ----------
+
+export const authApi = {
+  login: (username: string, password: string) =>
+    request<Session>('/api/login', { method: 'POST', body: { username, password } }),
+
+  logout: (token: string) => request<{ message: string }>('/api/logout', { token, method: 'POST' }),
+
+  changePassword: (token: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>('/api/me/password', {
+      token,
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    }),
+
+  // Public: the same for everyone, used to build the input forms.
+  getIndicators: () => request<IndicatorInfo[]>('/api/indicators'),
+};
+
+// ---------- health data: one interface for the crew and for mission control ----------
+
+// Everything the indications page needs. The crew version uses /api/...,
+// the mission control version uses /api/admin/astronauts/{id}/... for one crew member.
+export interface HealthSource {
+  getStatus: () => Promise<StatusOverview>;
+  getChecklist: () => Promise<Checklist>;
+  getReadings: (indicatorId: string, days?: number) => Promise<Reading[]>;
+  updateReading: (readingId: number, values: Record<string, number>) => Promise<StatusResult>;
+  deleteReading: (readingId: number) => Promise<void>;
+  // null when this user cannot log new readings (mission control has none of its own).
+  createReading: ((reading: NewReading) => Promise<StatusResult>) | null;
+}
+
+export function crewSource(token: string): HealthSource {
+  return {
+    getStatus: () => request<StatusOverview>('/api/status', { token }),
+    getChecklist: () => request<Checklist>('/api/checklist', { token }),
+    getReadings: (indicatorId, days = 365) =>
+      request<Reading[]>(`/api/readings?indicator=${encodeURIComponent(indicatorId)}&days=${days}`, { token }),
+    updateReading: (readingId, values) =>
+      request<StatusResult>(`/api/readings/${readingId}`, { token, method: 'PUT', body: { values } }),
+    deleteReading: (readingId) =>
+      request<{ message: string }>(`/api/readings/${readingId}`, { token, method: 'DELETE' }).then(() => undefined),
+    createReading: (reading) =>
+      request<StatusResult>('/api/readings', { token, method: 'POST', body: reading }),
+  };
+}
+
+export function crewMemberSource(token: string, astronautId: number): HealthSource {
+  const base = `/api/admin/astronauts/${astronautId}`;
+  return {
+    getStatus: () => request<StatusOverview>(`${base}/status`, { token }),
+    getChecklist: () => request<Checklist>(`${base}/checklist`, { token }),
+    getReadings: (indicatorId, days = 365) =>
+      request<Reading[]>(`${base}/readings?indicator=${encodeURIComponent(indicatorId)}&days=${days}`, { token }),
+    updateReading: (readingId, values) =>
+      request<StatusResult>(`/api/admin/readings/${readingId}`, { token, method: 'PUT', body: { values } }),
+    deleteReading: (readingId) =>
+      request<{ message: string }>(`/api/admin/readings/${readingId}`, { token, method: 'DELETE' }).then(() => undefined),
+    createReading: null,
+  };
+}
+
+// ---------- mission control: crew accounts ----------
+
+export const adminApi = {
+  listCrew: (token: string) => request<CrewMember[]>('/api/admin/astronauts', { token }),
+
+  createCrew: (token: string, username: string, password: string, sex: Sex) =>
+    request<{ astronautId: number; username: string; isAdmin: boolean; sex: Sex }>('/api/admin/astronauts', {
+      token,
+      method: 'POST',
+      body: { username, password, sex },
+    }),
+
+  resetPassword: (token: string, astronautId: number, newPassword: string) =>
+    request<{ message: string }>(`/api/admin/astronauts/${astronautId}/password`, {
+      token,
+      method: 'POST',
+      body: { newPassword },
+    }),
+
+  deleteCrew: (token: string, astronautId: number) =>
+    request<{ message: string }>(`/api/admin/astronauts/${astronautId}`, { token, method: 'DELETE' }),
+};

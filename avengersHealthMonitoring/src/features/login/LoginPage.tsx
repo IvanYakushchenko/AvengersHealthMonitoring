@@ -3,22 +3,15 @@ import { animate, stagger } from 'animejs'
 import { Eye, EyeOff, Loader2, LogIn, Lock, User } from 'lucide-react'
 import NasaLogo from './components/NasaLogo'
 import Heartbeat from './components/Heartbeat'
+import { authApi, type Session } from '../../api/healthApi'
 
 type LoginPageProps = {
-  onLogin: (username: string) => void
+  onLogin: (session: Session) => void
+  // Shown above the form, e.g. "Your session has ended".
+  notice?: string | null
 }
 
 type FieldErrors = { username?: string; password?: string }
-
-const MIN_PASSWORD_LENGTH = 4
-
-// Placeholder: replace with a real authentication request. Throw on failure.
-async function authenticate(_username: string, password: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 600))
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error('Invalid username or password.')
-  }
-}
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -28,12 +21,10 @@ function validate(username: string, password: string): FieldErrors {
   const errors: FieldErrors = {}
   if (!username.trim()) errors.username = 'Username is required.'
   if (!password) errors.password = 'Password is required.'
-  else if (password.length < MIN_PASSWORD_LENGTH)
-    errors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
   return errors
 }
 
-function LoginPage({ onLogin }: LoginPageProps) {
+function LoginPage({ onLogin, notice }: LoginPageProps) {
   const cardRef = useRef<HTMLFormElement>(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -87,8 +78,8 @@ function LoginPage({ onLogin }: LoginPageProps) {
     setSubmitError('')
     setLoading(true)
     try {
-      await authenticate(username.trim(), password)
-      onLogin(username.trim())
+      const session = await authApi.login(username.trim(), password)
+      onLogin(session)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Login failed. Please try again.')
       shake()
@@ -176,6 +167,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
           {capsLock && <p className="text-xs text-amber-700">Caps Lock is on.</p>}
         </div>
 
+        {notice && !submitError && <p className="text-sm text-brand">{notice}</p>}
         <p aria-live="polite" className="min-h-5 text-sm text-danger">
           {submitError}
         </p>

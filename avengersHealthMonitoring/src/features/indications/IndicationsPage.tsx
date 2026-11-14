@@ -8,6 +8,9 @@ import {
   Edit3,
   Check,
   Minus,
+  Trash2,
+  KeyRound,
+  ArrowLeft,
 } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 import {
@@ -18,22 +21,48 @@ import {
   type IndicationItem,
 } from './data/indicationGroups';
 import { BINDING_BY_ITEM_ID, toAlertStatus } from './data/indicatorBindings';
-import { healthApi, ApiError } from './api/healthApi';
+import { ApiError, type HealthSource, type Reading, type Sex } from '../../api/healthApi';
 import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
 import { ModelPanel } from './components/ModelPanel';
 
 interface IndicationsPageProps {
-  crewId: string;
+  source: HealthSource;
+  // Shown in the header: the crew member's name, or "Crew: <name>" for mission control.
+  crewLabel: string;
+  // Picks the 3D body model for this crew member.
+  sex: Sex | null;
+  // false for mission control, which cannot log readings for itself.
+  canLog: boolean;
+  onBack?: () => void;
+  onChangePassword: () => void;
   onLogout: () => void;
+  onSessionExpired: () => void;
 }
 
-export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogout }) => {
-  const { snapshot, error, loading, refresh } = useHealthData();
+// The card editor: a new reading, or a correction of the newest one.
+interface Editor {
+  itemId: string;
+  mode: 'new' | 'correct';
+  readingId?: number;
+}
+
+export const IndicationsPage: React.FC<IndicationsPageProps> = ({
+  source,
+  crewLabel,
+  sex,
+  canLog,
+  onBack,
+  onChangePassword,
+  onLogout,
+  onSessionExpired,
+}) => {
+  const { snapshot, rules, error, loading, refresh } = useHealthData(source, onSessionExpired);
   const [selectedRegion, setSelectedRegion] = useState<BodyRegion | 'ALL'>('ALL');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const [draftValues, setDraftValues] = useState<Record<string, string>>({});
   const [editError, setEditError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -45,12 +74,12 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
         items: group.items.map((item) => {
           const binding = BINDING_BY_ITEM_ID[item.id];
           const result = snapshot?.statuses[binding.indicatorId];
-          const values = snapshot?.latestValues[binding.indicatorId];
+          const reading = snapshot?.latestReadings[binding.indicatorId];
           return {
             ...item,
             status: toAlertStatus(result?.status),
             message: result?.message,
-            currentValue: values ? binding.format(values) : '—',
+            currentValue: reading ? binding.format(reading.values) : '—',
             privateSurgeonFlag: item.id === 'mood-stress' && result?.escalate === true,
           };
         }),
@@ -72,7 +101,10 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     }
   }, [selectedRegion]);
 
-  const handleStartEdit = (item: IndicationItem) => {
+  // Allowed range and optional flag from the backend (empty while loading).
+  const fieldRule = (indicatorId: string, key: string) => rules[indicatorId]?.values[key];
+
+  const startNew = (item: IndicationItem) => {
     const binding = BINDING_BY_ITEM_ID[item.id];
     const empty: Record<string, string> = {};
     binding.fields.forEach((field) => {
@@ -80,15 +112,28 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     });
     setDraftValues(empty);
     setEditError(null);
-    setEditingId(item.id);
+    setEditor({ itemId: item.id, mode: 'new' });
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
+  const startCorrect = (item: IndicationItem, reading: Reading) => {
+    const binding = BINDING_BY_ITEM_ID[item.id];
+    const filled: Record<string, string> = {};
+    binding.fields.forEach((field) => {
+      const value = reading.values[field.key];
+      filled[field.key] = value === undefined ? '' : String(value);
+    });
+    setDraftValues(filled);
+    setEditError(null);
+    setEditor({ itemId: item.id, mode: 'correct', readingId: reading.id });
+  };
+
+  const cancelEdit = () => {
+    setEditor(null);
     setEditError(null);
   };
 
-  const handleSaveEdit = async (item: IndicationItem) => {
+  const handleSave = async (item: IndicationItem) => {
+    if (!editor) return;
     const binding = BINDING_BY_ITEM_ID[item.id];
 
     // Check the typed numbers here; the backend checks the allowed ranges.
@@ -96,7 +141,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     for (const field of binding.fields) {
       const raw = (draftValues[field.key] ?? '').trim();
       if (raw === '') {
-        if (field.optional) continue;
+        if (fieldRule(binding.indicatorId, field.key)?.optional) continue;
         setEditError(`Enter ${field.label}.`);
         return;
       }
@@ -111,13 +156,37 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
     setSaving(true);
     setEditError(null);
     try {
-      await healthApi.postReading({ indicatorId: binding.indicatorId, values });
-      setEditingId(null);
+      if (editor.mode === 'new') {
+        if (!source.createReading) return;
+        await source.createReading({ indicatorId: binding.indicatorId, values });
+      } else if (editor.readingId !== undefined) {
+        await source.updateReading(editor.readingId, values);
+      }
+      setEditor(null);
       await refresh();
     } catch (err) {
-      setEditError(err instanceof ApiError ? err.message : 'Could not save the reading.');
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+      setEditError(err instanceof Error ? err.message : 'Could not save the reading.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (reading: Reading) => {
+    if (!window.confirm('Delete this reading? It cannot be undone.')) return;
+    setActionError(null);
+    try {
+      await source.deleteReading(reading.id);
+      await refresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+      setActionError(err instanceof Error ? err.message : 'Could not delete the reading.');
     }
   };
 
@@ -170,7 +239,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                   Astronaut Health Monitor
                 </h1>
                 <span className="hidden md:inline-block px-2 py-0.5 rounded text-[11px] font-mono bg-ink-soft text-brand-light border border-white/10">
-                  {crewId}
+                  {crewLabel}
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
@@ -191,6 +260,22 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
               )}
             </div>
 
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Crew list
+              </button>
+            )}
+            <button
+              onClick={onChangePassword}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              Password
+            </button>
             <button
               onClick={onLogout}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
@@ -203,8 +288,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
       </header>
 
       {/* Backend status message */}
-      {(error || loading) && (
-        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6">
+      {(error || loading || actionError) && (
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 space-y-2">
           {error ? (
             <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-slate-200 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
@@ -213,9 +298,10 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                 {error} Values and statuses are not shown until it is running again.
               </div>
             </div>
-          ) : (
+          ) : loading ? (
             <p className="text-xs text-slate-400">Loading readings…</p>
-          )}
+          ) : null}
+          {actionError && <p className="text-sm text-red-300">{actionError}</p>}
         </div>
       )}
 
@@ -264,8 +350,9 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {visibleItems.map((item) => {
-                    const isEditing = editingId === item.id;
                     const binding = BINDING_BY_ITEM_ID[item.id];
+                    const isEditing = editor?.itemId === item.id;
+                    const latest = snapshot?.latestReadings[binding.indicatorId];
 
                     return (
                       <article
@@ -289,41 +376,49 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                           {renderStatusBadge(item.status, item.privateSurgeonFlag)}
                         </div>
 
-                        {/* Value & Log input */}
-                        <div className="mt-3 p-3 rounded-lg bg-white/5 flex items-center justify-between gap-2">
+                        {/* Value, or the editor for a new reading or a correction */}
+                        <div className="mt-3 p-3 rounded-lg bg-white/5">
                           {isEditing ? (
                             <div className="w-full space-y-2">
                               <div className="grid grid-cols-2 gap-2">
-                                {binding.fields.map((field) => (
-                                  <label
-                                    key={field.key}
-                                    className="flex flex-col gap-1 text-[11px] text-slate-400"
-                                  >
-                                    {field.label}
-                                    {field.optional && ' (optional)'}
-                                    <input
-                                      type="number"
-                                      inputMode="decimal"
-                                      min={field.min}
-                                      max={field.max}
-                                      step={field.step}
-                                      value={draftValues[field.key] ?? ''}
-                                      onChange={(e) =>
-                                        setDraftValues((prev) => ({
-                                          ...prev,
-                                          [field.key]: e.target.value,
-                                        }))
-                                      }
-                                      className="px-2.5 py-1.5 text-sm font-mono text-slate-200 bg-panel border border-brand rounded-md focus:outline-none"
-                                    />
-                                  </label>
-                                ))}
+                                {binding.fields.map((field) => {
+                                  const rule = fieldRule(binding.indicatorId, field.key);
+                                  return (
+                                    <label
+                                      key={field.key}
+                                      className="flex flex-col gap-1 text-[11px] text-slate-400"
+                                    >
+                                      {field.label}
+                                      {rule?.optional && ' (optional)'}
+                                      <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        min={rule?.limits[0]}
+                                        max={rule?.limits[1]}
+                                        step={rule?.wholeNumber ? 1 : 'any'}
+                                        value={draftValues[field.key] ?? ''}
+                                        onChange={(e) =>
+                                          setDraftValues((prev) => ({
+                                            ...prev,
+                                            [field.key]: e.target.value,
+                                          }))
+                                        }
+                                        className="px-2.5 py-1.5 text-sm font-mono text-slate-200 bg-panel border border-brand rounded-md focus:outline-none"
+                                      />
+                                      {rule && (
+                                        <span className="text-[10px] text-slate-500">
+                                          allowed {rule.limits[0]}–{rule.limits[1]}
+                                        </span>
+                                      )}
+                                    </label>
+                                  );
+                                })}
                               </div>
                               {editError && <p className="text-xs text-red-300">{editError}</p>}
                               <div className="flex justify-end gap-2">
                                 <button
                                   type="button"
-                                  onClick={handleCancelEdit}
+                                  onClick={cancelEdit}
                                   className="px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 cursor-pointer"
                                 >
                                   Cancel
@@ -331,17 +426,16 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                                 <button
                                   type="button"
                                   disabled={saving}
-                                  onClick={() => handleSaveEdit(item)}
+                                  onClick={() => handleSave(item)}
                                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-brand text-white text-xs font-medium hover:bg-brand-dark cursor-pointer disabled:opacity-60 disabled:cursor-wait"
-                                  title="Save reading"
                                 >
                                   <Check className="w-3.5 h-3.5" />
-                                  {saving ? 'Saving…' : 'Save reading'}
+                                  {saving ? 'Saving…' : editor?.mode === 'correct' ? 'Save correction' : 'Save reading'}
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <>
+                            <div className="flex items-center justify-between gap-2">
                               <div>
                                 <div className="text-xl font-bold font-mono text-slate-200">
                                   {item.currentValue}
@@ -350,17 +444,42 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                                   Baseline: {item.baseline}
                                 </div>
                               </div>
+                            </div>
+                          )}
+                        </div>
 
+                        {/* Actions */}
+                        {!isEditing && (
+                          <div className="mt-2 flex flex-wrap justify-end gap-2">
+                            {canLog && (
                               <button
-                                onClick={() => handleStartEdit(item)}
+                                onClick={() => startNew(item)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
                               >
                                 <Edit3 className="w-3.5 h-3.5 text-brand-light" />
                                 Log
                               </button>
-                            </>
-                          )}
-                        </div>
+                            )}
+                            {latest && (
+                              <>
+                                <button
+                                  onClick={() => startCorrect(item, latest)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5 text-brand-light" />
+                                  Correct
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(latest)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-danger text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-danger" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
 
                         {/* Backend explanation of the latest rating */}
                         {item.message && (
@@ -388,7 +507,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
 
         {/* Right Column: 3D body model, full height */}
         <div className="lg:col-span-4">
-          <ModelPanel items={allItems} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
+          <ModelPanel sex={sex} items={allItems} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
         </div>
       </main>
     </div>
