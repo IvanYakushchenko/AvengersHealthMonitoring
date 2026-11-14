@@ -8,4 +8,10 @@ export default defineConfig({
       react(),
       tailwindcss()
   ],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client', '@react-three/fiber', '@react-three/drei', 'three'],
+  },
 })

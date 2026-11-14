@@ -22,3 +22,9 @@
     radial-gradient(1.5px 1.5px at 22% 90%, #c9dcff 40%, transparent 41%),
     radial-gradient(ellipse at 50% 120%, rgb(11 61 145 / 0.45), transparent 60%);
 }
+
+/* Softer dark tones for the indications screens (lower contrast than pure black/white) */
+@theme {
+  --color-night: #0a0c10;  /* page background (matches login black) */
+  --color-panel: #131826;  /* cards and side panels, dark and low contrast */
+}

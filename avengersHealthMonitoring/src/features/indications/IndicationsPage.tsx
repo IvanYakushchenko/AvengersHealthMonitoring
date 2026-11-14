@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Activity,
   LogOut,
   CheckCircle2,
   AlertTriangle,
@@ -18,6 +17,7 @@ import {
   type IndicationItem,
 } from './data/indicationGroups';
 import { BodyMapPanel } from './components/BodyMapPanel';
+import { ModelPanel } from './components/ModelPanel';
 
 interface IndicationsPageProps {
   crewId: string;
@@ -135,18 +135,16 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
   const attentionCount = allItems.length - nominalCount;
 
   return (
-    <div className="min-h-screen bg-surface text-ink flex flex-col">
+    <div className="starfield min-h-screen text-slate-200 flex flex-col">
       {/* Top Dark Header */}
-      <header className="bg-ink text-white border-b border-white/10 sticky top-0 z-20">
+      <header className="bg-night/80 backdrop-blur text-slate-200 border-b border-white/10 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-brand flex items-center justify-center">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
+            <img src="/mission-logo.png" alt="" className="w-10 h-10" />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-sm sm:text-base tracking-tight">
-                  HERMES Health Monitor
+                  Astronaut Health Monitor
                 </h1>
                 <span className="hidden md:inline-block px-2 py-0.5 rounded text-[11px] font-mono bg-ink-soft text-brand-light border border-white/10">
                   {crewId}
@@ -168,7 +166,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
 
             <button
               onClick={onLogout}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               Logout
@@ -180,7 +178,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
       {/* Main Content Layout */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
         {/* Left Column: Interactive Body Map & Habitat Panel */}
-        <div className="lg:col-span-4 xl:col-span-3">
+        <div className="lg:col-span-3">
           <BodyMapPanel
             items={allItems}
             selectedRegion={selectedRegion}
@@ -189,16 +187,16 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
         </div>
 
         {/* Right Column: Indication Groups */}
-        <div ref={gridRef} className="lg:col-span-8 xl:col-span-9 space-y-8">
+        <div ref={gridRef} className="lg:col-span-5 space-y-8">
           {selectedRegion !== 'ALL' && (
-            <div className="bg-brand/10 border border-brand/25 rounded-xl px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-brand-dark font-medium">
+            <div className="bg-ink-soft/80 border border-brand-light/40 rounded-xl px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-slate-200 font-medium">
                 <SlidersHorizontal className="w-4 h-4" />
                 Filtered by region: <strong>{selectedRegion}</strong>
               </div>
               <button
                 onClick={() => setSelectedRegion('ALL')}
-                className="text-xs font-semibold text-brand hover:text-brand-dark cursor-pointer"
+                className="text-xs font-semibold text-brand-light hover:text-brand-light cursor-pointer"
               >
                 Reset filter
               </button>
@@ -215,8 +213,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
 
             return (
               <section key={group.id} className="space-y-3">
-                <div className="border-b border-slate-200 pb-2">
-                  <h2 className="text-lg font-bold text-ink">{group.title}</h2>
+                <div className="border-b border-brand-light/30 pb-2">
+                  <h2 className="text-lg font-bold text-slate-200">{group.title}</h2>
                   <p className="text-xs text-slate-500">{group.subtitle}</p>
                 </div>
 
@@ -227,27 +225,27 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                     return (
                       <article
                         key={item.id}
-                        className={`indication-card bg-white rounded-xl border p-4 shadow-xs transition-all ${
+                        className={`indication-card bg-panel rounded-xl border p-4 shadow-md transition-all ${
                           item.status === 'critical'
                             ? 'border-danger/50 ring-1 ring-danger/20'
                             : item.status === 'warning'
                             ? 'border-amber-400/60'
-                            : 'border-slate-200/90 hover:border-brand/40'
+                            : 'border-white/10 hover:border-brand-light/60'
                         }`}
                       >
                         {/* Card Top Row */}
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <span className="inline-block text-[11px] font-mono uppercase tracking-wider text-brand font-semibold">
+                            <span className="inline-block text-[11px] font-mono uppercase tracking-wider text-brand-light font-semibold">
                               {item.region}
                             </span>
-                            <h3 className="text-base font-bold text-ink">{item.name}</h3>
+                            <h3 className="text-base font-bold text-slate-200">{item.name}</h3>
                           </div>
                           {renderStatusBadge(item.status, item.privateSurgeonFlag)}
                         </div>
 
                         {/* Value & Quick Log Input */}
-                        <div className="mt-3 p-3 rounded-lg bg-surface flex items-center justify-between gap-2">
+                        <div className="mt-3 p-3 rounded-lg bg-white/5 flex items-center justify-between gap-2">
                           {isEditing ? (
                             <div className="flex items-center gap-2 w-full">
                               <input
@@ -256,7 +254,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                                 onChange={(e) => setDraftValue(e.target.value)}
                                 placeholder={item.inputLabel}
                                 autoFocus
-                                className="w-full px-2.5 py-1.5 text-sm font-mono bg-white border border-brand rounded-md focus:outline-none"
+                                className="w-full px-2.5 py-1.5 text-sm font-mono bg-panel border border-brand rounded-md focus:outline-none"
                               />
                               <button
                                 onClick={() => handleSaveEdit(group.id, item)}
@@ -269,24 +267,24 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                           ) : (
                             <>
                               <div>
-                                <div className="text-xl font-bold font-mono text-ink">
+                                <div className="text-xl font-bold font-mono text-slate-200">
                                   {item.currentValue}{' '}
                                   {!item.currentValue.includes(item.unit) && (
-                                    <span className="text-xs font-normal text-slate-500">
+                                    <span className="text-xs font-normal text-slate-400">
                                       {item.unit}
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[11px] text-slate-500">
+                                <div className="text-[11px] text-slate-400">
                                   Baseline: {item.baseline}
                                 </div>
                               </div>
 
                               <button
                                 onClick={() => handleStartEdit(item)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-slate-200 hover:border-brand text-xs font-medium text-ink transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
                               >
-                                <Edit3 className="w-3.5 h-3.5 text-brand" />
+                                <Edit3 className="w-3.5 h-3.5 text-brand-light" />
                                 Log
                               </button>
                             </>
@@ -294,16 +292,16 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
                         </div>
 
                         {/* Hazard & Alert Logic Metadata */}
-                        <div className="mt-3 space-y-1 text-xs text-slate-600">
+                        <div className="mt-3 space-y-1 text-xs text-slate-400">
                           <p>
-                            <span className="font-semibold text-ink">Hazard:</span> {item.hazard}
+                            <span className="font-semibold text-slate-200">Hazard:</span> {item.hazard}
                           </p>
                           <p>
-                            <span className="font-semibold text-ink">Alert logic:</span>{' '}
+                            <span className="font-semibold text-slate-200">Alert logic:</span>{' '}
                             {item.alertLogic}
                           </p>
                           {item.trendNote && (
-                            <p className="text-[11px] font-mono text-brand-dark pt-1">
+                            <p className="text-[11px] font-mono text-brand-light pt-1">
                               ↳ {item.trendNote}
                             </p>
                           )}
@@ -315,6 +313,11 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({ crewId, onLogo
               </section>
             );
           })}
+        </div>
+
+        {/* Right Column: 3D body model, full height */}
+        <div className="lg:col-span-4">
+          <ModelPanel items={allItems} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
         </div>
       </main>
     </div>

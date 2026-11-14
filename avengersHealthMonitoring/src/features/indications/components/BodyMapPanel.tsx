@@ -47,19 +47,19 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
   const habitatStatus = getRegionStatus('Habitat panel');
 
   return (
-    <aside className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 flex flex-col justify-between">
+    <aside className="bg-panel rounded-2xl border border-white/10 shadow-sm p-5 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <span className="text-[11px] font-mono uppercase tracking-wider text-brand font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-brand-light font-semibold">
               Anatomical & Cabin Map
             </span>
-            <h2 className="text-base font-bold text-ink">Region Filter</h2>
+            <h2 className="text-base font-bold text-slate-200">Region Filter</h2>
           </div>
           {selectedRegion !== 'ALL' && (
             <button
               onClick={() => onSelectRegion('ALL')}
-              className="text-xs font-medium text-brand hover:text-brand-dark underline cursor-pointer"
+              className="text-xs font-medium text-brand-light hover:text-white underline cursor-pointer"
             >
               Show all (10)
             </button>
@@ -67,7 +67,7 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
         </div>
 
         {/* Interactive SVG Astronaut Silhouette */}
-        <div className="relative bg-ink rounded-xl p-4 flex flex-col items-center justify-center overflow-hidden">
+        <div className="relative bg-night rounded-xl p-4 flex flex-col items-center justify-center overflow-hidden">
           <svg
             viewBox="0 0 220 270"
             className="w-full max-w-[210px] h-auto select-none"
@@ -174,7 +174,7 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   isSelected
                     ? 'bg-brand text-white'
-                    : 'bg-surface hover:bg-slate-200/70 text-ink'
+                    : 'bg-white/5 hover:bg-slate-200/70 text-slate-200'
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
       </div>
 
       {/* Habitat Panel Card (Cabin CO2 & Radiation) */}
-      <div className="mt-4 pt-4 border-t border-slate-200">
+      <div className="mt-4 pt-4 border-t border-white/10">
         <button
           onClick={() =>
             onSelectRegion(selectedRegion === 'Habitat panel' ? 'ALL' : 'Habitat panel')
@@ -223,7 +223,7 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
               {habitatStatus}
             </span>
           </div>
-          <p className="text-xs text-slate-300 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Cabin CO₂ & Dosimeter Radiation Telemetry
           </p>
         </button>
@@ -232,7 +232,7 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
         {items.some((i) => i.privateSurgeonFlag) && (
           <div className="mt-3 p-3 rounded-xl bg-danger/10 border border-danger/30 flex items-start gap-2.5">
             <ShieldAlert className="w-4 h-4 text-danger shrink-0 mt-0.5" />
-            <div className="text-xs text-ink">
+            <div className="text-xs text-slate-200">
               <span className="font-semibold text-danger block">
                 Private Flight Surgeon Flag Active
               </span>

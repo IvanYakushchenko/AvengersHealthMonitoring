@@ -191,7 +191,8 @@ function LoginPage({ onLogin }: LoginPageProps) {
         </button>
       </form>
       <p className="absolute bottom-3 text-center text-xs text-slate-400">
-        Space Apps prototype · not an official NASA product
+        Space Apps prototype · not an official NASA product <br/>
+        AUK Avengers team | NASA Space Apps Hackaton 2026
       </p>
     </div>
   )
