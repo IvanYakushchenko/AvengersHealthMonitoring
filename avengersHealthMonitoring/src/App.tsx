@@ -10,7 +10,7 @@ function App() {
     return <LoginPage onLogin={setUser} />
   }
 
-  return <IndicationsPage onLogout={() => setUser(null)} />
+  return <IndicationsPage crewId={user} onLogout={() => setUser(null)} />;
 }
 
 export default App
