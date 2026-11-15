@@ -40,12 +40,20 @@ export interface Checklist {
   points: number;
 }
 
+// Range the simulated sensors use for this value (set in the backend's rules.json).
+export interface SimulationRange {
+  min: number;
+  max: number;
+  whole?: boolean;
+}
+
 export interface ValueRule {
   limits: [number, number];
   normal: [number, number];
   caution: [number, number];
   optional: boolean;
   wholeNumber: boolean;
+  simulation?: SimulationRange | null;
 }
 
 export interface IndicatorInfo {

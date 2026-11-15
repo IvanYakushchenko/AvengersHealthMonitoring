@@ -21,7 +21,8 @@ import {
   type IndicationGroup,
   type IndicationItem,
 } from './data/indicationGroups';
-import { BINDING_BY_ITEM_ID, toAlertStatus } from './data/indicatorBindings';
+import { BINDING_BY_ITEM_ID, INDICATOR_BINDINGS, toAlertStatus } from './data/indicatorBindings';
+import { generateReadingValues } from './data/simulatedReadings';
 import { ApiError, type HealthSource, type Reading, type Sex } from '../../api/healthApi';
 import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
@@ -68,6 +69,11 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
   const [editError, setEditError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Manual: the user enters every value. Auto: simulated sensors send a realistic set of values.
+  const [mode, setMode] = useState<'manual' | 'auto'>('manual');
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [lastGenerated, setLastGenerated] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Card content with the backend's rating and newest values filled in.
@@ -177,6 +183,40 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  // Auto mode: one realistic value for each indicator, saved like a sensor reading.
+  const generateSet = async () => {
+    if (!source.createReading || generating) return;
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      if (Object.keys(rules).length === 0) {
+        throw new Error('The simulation ranges are not loaded yet. Check that the backend is running.');
+      }
+      for (const binding of INDICATOR_BINDINGS) {
+        const values = generateReadingValues(rules[binding.indicatorId]);
+        if (Object.keys(values).length === 0) continue;
+        await source.createReading({ indicatorId: binding.indicatorId, values });
+      }
+      setLastGenerated(new Date().toLocaleTimeString());
+      await refresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+      setGenerateError(err instanceof Error ? err.message : 'Could not save the simulated readings.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const switchMode = (next: 'manual' | 'auto') => {
+    setMode(next);
+    setEditor(null);
+    setEditError(null);
+    if (next === 'auto') void generateSet();
   };
 
   const handleDelete = async (reading: Reading) => {
@@ -331,6 +371,45 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
 
         {/* Right Column: Indication Groups */}
         <div ref={gridRef} className="lg:col-span-5 space-y-8">
+          {canLog && (
+            <div className="bg-panel rounded-xl border border-white/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+              <div role="radiogroup" aria-label="Input mode" className="inline-flex rounded-lg border border-white/10 bg-ink-soft p-0.5">
+                {(['manual', 'auto'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === option}
+                    onClick={() => switchMode(option)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize cursor-pointer ${
+                      mode === option ? 'bg-brand text-white' : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {mode === 'auto' ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400">
+                    {lastGenerated ? `Last set: ${lastGenerated}` : 'No simulated set yet'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={generateSet}
+                    disabled={generating}
+                    className="px-3 py-1.5 rounded-md bg-brand text-white text-xs font-medium hover:bg-brand-dark cursor-pointer disabled:opacity-60"
+                  >
+                    {generating ? 'Generating…' : 'Generate new set'}
+                  </button>
+                </div>
+              ) : (
+                <span className="text-xs text-slate-400">Enter each reading with Log</span>
+              )}
+              {generateError && <p className="w-full text-xs text-red-300">{generateError}</p>}
+            </div>
+          )}
+
           {selectedRegion !== 'ALL' && (
             <div className="bg-ink-soft/80 border border-brand-light/40 rounded-xl px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-200 font-medium">
@@ -464,7 +543,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                         {/* Actions */}
                         {!isEditing && (
                           <div className="mt-2 flex flex-wrap justify-end gap-2">
-                            {canLog && (
+                            {canLog && mode === 'manual' && (
                               <button
                                 onClick={() => startNew(item)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
