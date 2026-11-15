@@ -1,7 +1,7 @@
 # Code was assisted with Claude.
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app import auth, checklist, database, health, reserved_names
+from app import auth, checklist, database, health, personal_ranges, reserved_names
 from app.schemas import (
     AccountInfo,
     Checklist,
@@ -11,6 +11,8 @@ from app.schemas import (
     CrewMemberInfo,
     NewCrew,
     PasswordReset,
+    PersonalRange,
+    PersonalRangeRow,
     SavedReading,
     StatusOverview,
     StatusResult,
@@ -147,6 +149,37 @@ def member_status(crew_id: int, astronaut_id: int):
 def member_checklist(crew_id: int, astronaut_id: int):
     member_of_crew(crew_id, astronaut_id)
     return checklist.build_checklist(astronaut_id)
+
+
+# ---------- personal normal/caution ranges of one crew member ----------
+
+# Code was assisted with Claude.
+# Every value of every indicator, with its default ranges and the ranges this member uses.
+@router.get("/crews/{crew_id}/members/{astronaut_id}/ranges", response_model=list[PersonalRangeRow])
+def member_ranges(crew_id: int, astronaut_id: int):
+    member = member_of_crew(crew_id, astronaut_id)
+    return personal_ranges.rows(member["personal_ranges"])
+
+
+# Set a personal normal and caution range for one value (e.g. heart_rate, bpm).
+@router.put("/crews/{crew_id}/members/{astronaut_id}/ranges/{indicator_id}/{value_key}")
+def set_member_range(crew_id: int, astronaut_id: int, indicator_id: str, value_key: str, new: PersonalRange):
+    member_of_crew(crew_id, astronaut_id)
+    problem = personal_ranges.find_problem(indicator_id, value_key, new.normal, new.caution)
+    if problem:
+        raise HTTPException(422, problem)
+    database.set_personal_range(astronaut_id, indicator_id, value_key, new.normal, new.caution)
+    return {"message": "Personal range saved"}
+
+
+# Remove a personal range, so this value uses the default range again.
+@router.delete("/crews/{crew_id}/members/{astronaut_id}/ranges/{indicator_id}/{value_key}")
+def reset_member_range(crew_id: int, astronaut_id: int, indicator_id: str, value_key: str):
+    member_of_crew(crew_id, astronaut_id)
+    if personal_ranges.find_value_rule(indicator_id, value_key) is None:
+        raise HTTPException(404, "Unknown indicator or value")
+    database.reset_personal_range(astronaut_id, indicator_id, value_key)
+    return {"message": "Default range restored"}
 
 
 # A crew member's reading history, e.g. ?indicator=spo2&days=30

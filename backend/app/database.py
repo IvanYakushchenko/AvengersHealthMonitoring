@@ -135,6 +135,8 @@ def init_db():
             "ALTER TABLE astronauts ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT false"
         )
         migrate_to_crews(conn)
+        # Personal normal/caution ranges set by the superadmin (see personal_ranges.py).
+        conn.execute("ALTER TABLE astronauts ADD COLUMN IF NOT EXISTS personal_ranges JSONB")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS sessions (
@@ -168,7 +170,7 @@ def init_db():
 # Columns of an account, with its crew's name. Used by every lookup that returns an account.
 ACCOUNT_SELECT = """
     SELECT a.id, a.username, a.password_hash, a.is_admin, a.is_superadmin, a.sex,
-           a.crew_id, c.name AS crew_name, a.created_at
+           a.crew_id, c.name AS crew_name, a.created_at, a.personal_ranges
     FROM astronauts a LEFT JOIN crews c ON c.id = a.crew_id
 """
 
@@ -209,7 +211,7 @@ def list_crew(crew_id):
     with get_connection() as conn:
         return conn.execute(
             """
-            SELECT id, username, sex, created_at FROM astronauts
+            SELECT id, username, sex, created_at, personal_ranges FROM astronauts
             WHERE crew_id = %s AND NOT is_admin AND NOT is_superadmin
             ORDER BY id
             """,
@@ -283,6 +285,33 @@ def delete_crew_member(astronaut_id):
             (astronaut_id,),
         ).rowcount
     return deleted > 0
+
+
+# Code was assisted with Claude.
+# Set one personal range of an astronaut (replaces any earlier one for that value).
+# Read and write in one transaction so two superadmin edits can't overwrite each other.
+def set_personal_range(astronaut_id, indicator_id, value_key, normal, caution):
+    with get_connection() as conn, conn.transaction():
+        row = conn.execute(
+            "SELECT personal_ranges FROM astronauts WHERE id = %s FOR UPDATE", (astronaut_id,)
+        ).fetchone()
+        ranges = row["personal_ranges"] or {}
+        ranges.setdefault(indicator_id, {})[value_key] = {"normal": normal, "caution": caution}
+        conn.execute("UPDATE astronauts SET personal_ranges = %s WHERE id = %s", (Jsonb(ranges), astronaut_id))
+
+
+# Remove one personal range, so that value uses the default range again.
+def reset_personal_range(astronaut_id, indicator_id, value_key):
+    with get_connection() as conn, conn.transaction():
+        row = conn.execute(
+            "SELECT personal_ranges FROM astronauts WHERE id = %s FOR UPDATE", (astronaut_id,)
+        ).fetchone()
+        ranges = row["personal_ranges"] or {}
+        indicator = ranges.get(indicator_id, {})
+        indicator.pop(value_key, None)
+        if not indicator:
+            ranges.pop(indicator_id, None)
+        conn.execute("UPDATE astronauts SET personal_ranges = %s WHERE id = %s", (Jsonb(ranges), astronaut_id))
 
 
 # Set a new password hash and log the account out everywhere (both or neither).

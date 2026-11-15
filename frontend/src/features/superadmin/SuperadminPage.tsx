@@ -1,6 +1,6 @@
 // Code was assisted with Claude.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Activity, Building2, KeyRound, LogOut, Plus, Trash2, UserPlus, Users } from 'lucide-react';
+import { Activity, Building2, KeyRound, LogOut, Plus, SlidersHorizontal, Trash2, UserPlus, Users } from 'lucide-react';
 import {
   isUnauthorized,
   superadminApi,
@@ -10,6 +10,7 @@ import {
   type CrewMemberInfo,
 } from '../../api/healthApi';
 import { IndicationsPage } from '../indications';
+import { PersonalRangesPanel } from './PersonalRangesPanel';
 
 // Props of the superadmin page: the login and the actions that work on the whole app.
 interface SuperadminPageProps {
@@ -48,6 +49,8 @@ export function SuperadminPage({ token, username, onChangePassword, onLogout, on
   const [members, setMembers] = useState<CrewMemberInfo[]>([]);
   // The crew member whose health is open (read-only), with the crew it belongs to.
   const [viewing, setViewing] = useState<{ crew: Crew; member: CrewMemberInfo } | null>(null);
+  // The crew member whose personal normal/caution ranges are being edited.
+  const [ranging, setRanging] = useState<{ crew: Crew; member: CrewMemberInfo } | null>(null);
   const [resetMemberId, setResetMemberId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [memberMessage, setMemberMessage] = useState<string | null>(null);
@@ -226,6 +229,21 @@ export function SuperadminPage({ token, username, onChangePassword, onLogout, on
     );
   }
 
+  if (ranging) {
+    return (
+      <PersonalRangesPanel
+        key={ranging.member.astronautId}
+        token={token}
+        crewId={ranging.crew.crewId}
+        crewName={ranging.crew.name}
+        astronautId={ranging.member.astronautId}
+        username={ranging.member.username}
+        onClose={() => setRanging(null)}
+        onSessionExpired={onSessionExpired}
+      />
+    );
+  }
+
   return (
     <div className="starfield min-h-screen text-slate-200 flex flex-col">
       <header className="bg-night/80 backdrop-blur text-slate-200 border-b border-white/10 sticky top-0 z-20">
@@ -331,6 +349,14 @@ export function SuperadminPage({ token, username, onChangePassword, onLogout, on
                               </span>
                             </span>
                             <span className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRanging({ crew, member })}
+                              className={buttonClass}
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5 text-brand-light" />
+                              Ranges
+                            </button>
                             <button
                               type="button"
                               onClick={() => setViewing({ crew, member })}

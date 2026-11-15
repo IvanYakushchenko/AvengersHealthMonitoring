@@ -101,6 +101,25 @@ class CrewAdmin(BaseModel):
     createdAt: datetime
 
 
+# Code was assisted with Claude.
+# A personal normal and caution range for one value, sent by the superadmin.
+class PersonalRange(BaseModel):
+    normal: list[float] = Field(min_length=2, max_length=2)
+    caution: list[float] = Field(min_length=2, max_length=2)
+
+
+# One value of an indicator with its default ranges and the ranges in use for one crew member.
+class PersonalRangeRow(BaseModel):
+    indicatorId: str
+    valueKey: str
+    limits: list[float]
+    defaultNormal: list[float]
+    defaultCaution: list[float]
+    normal: list[float]
+    caution: list[float]
+    isPersonal: bool
+
+
 # One crew member as mission control sees them in the crew list.
 # status = the worst status over all their indicators.
 class CrewMember(BaseModel):

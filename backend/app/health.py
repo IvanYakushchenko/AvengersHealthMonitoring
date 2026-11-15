@@ -17,13 +17,14 @@ def is_in_future(taken_at):
 
 
 # Check a reading before saving it and return its rating.
+# personal = the crew member's personal ranges (None = defaults).
 # Stops the request with a 400 error if it can't be rated.
-def check_reading(indicator_id, values, taken_at):
+def check_reading(indicator_id, values, taken_at, personal=None):
     if not status_rules.has_rules(indicator_id):
         raise HTTPException(400, f"Unknown indicator: {indicator_id}")
     if taken_at is not None and is_in_future(taken_at):
         raise HTTPException(400, "takenAt cannot be in the future")
-    result = status_rules.rate_reading(indicator_id, values)
+    result = status_rules.rate_reading(indicator_id, values, personal)
     if result["status"] == "unknown":
         raise HTTPException(400, result["message"])
     return result
@@ -35,18 +36,20 @@ def check_indicator(indicator_id):
         raise HTTPException(400, f"Unknown indicator: {indicator_id}")
 
 
-# Rate the newest reading of every indicator for one astronaut.
+# Rate the newest reading of every indicator for one astronaut, with their personal ranges.
 # Returns {indicator_id: StatusResult}; "unknown" where there is no reading yet.
 def latest_statuses(astronaut_id):
-    return rate_latest(database.get_latest_readings(astronaut_id))
+    account = database.get_astronaut_by_id(astronaut_id)
+    return rate_latest(database.get_latest_readings(astronaut_id), account["personal_ranges"])
 
 
-# Rate newest readings given as {indicator_id: reading}. Same answer as latest_statuses.
-def rate_latest(latest):
+# Rate newest readings given as {indicator_id: reading}, using the personal ranges
+# (None = defaults). Same answer as latest_statuses.
+def rate_latest(latest, personal=None):
     results = {}
     for indicator_id in status_rules.load_rules()["indicators"]:
         if indicator_id in latest:
-            results[indicator_id] = status_rules.rate_reading(indicator_id, latest[indicator_id]["values"])
+            results[indicator_id] = status_rules.rate_reading(indicator_id, latest[indicator_id]["values"], personal)
         else:
             results[indicator_id] = status_rules.unknown_result(indicator_id, "No reading yet.")
     return results

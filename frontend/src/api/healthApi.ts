@@ -291,6 +291,19 @@ export interface CrewMemberInfo {
   createdAt: string;
 }
 
+// Code was assisted with Claude.
+// One value of an indicator: its default ranges and the ranges used for one crew member.
+export interface PersonalRangeRow {
+  indicatorId: string;
+  valueKey: string;
+  limits: [number, number];
+  defaultNormal: [number, number];
+  defaultCaution: [number, number];
+  normal: [number, number];
+  caution: [number, number];
+  isPersonal: boolean;
+}
+
 // One mission control account of a crew.
 export interface CrewAdmin {
   astronautId: number;
@@ -330,4 +343,29 @@ export const superadminApi = {
       method: 'POST',
       body: { username, password },
     }),
+
+  // Code was assisted with Claude.
+  // Personal normal/caution ranges of one crew member (superadmin only).
+  listPersonalRanges: (token: string, crewId: number, astronautId: number) =>
+    request<PersonalRangeRow[]>(`/api/superadmin/crews/${crewId}/members/${astronautId}/ranges`, { token }),
+
+  setPersonalRange: (
+    token: string,
+    crewId: number,
+    astronautId: number,
+    indicatorId: string,
+    valueKey: string,
+    normal: [number, number],
+    caution: [number, number],
+  ) =>
+    request<{ message: string }>(
+      `/api/superadmin/crews/${crewId}/members/${astronautId}/ranges/${indicatorId}/${valueKey}`,
+      { token, method: 'PUT', body: { normal, caution } },
+    ),
+
+  resetPersonalRange: (token: string, crewId: number, astronautId: number, indicatorId: string, valueKey: string) =>
+    request<{ message: string }>(
+      `/api/superadmin/crews/${crewId}/members/${astronautId}/ranges/${indicatorId}/${valueKey}`,
+      { token, method: 'DELETE' },
+    ),
 };

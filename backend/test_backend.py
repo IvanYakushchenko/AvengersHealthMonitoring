@@ -31,7 +31,7 @@ if os.environ.get("TEST_DATABASE_URL"):
 
 from pydantic import ValidationError  # noqa: E402
 
-from app import auth, checklist, status_rules  # noqa: E402
+from app import auth, checklist, personal_ranges, status_rules  # noqa: E402
 from app.schemas import Credentials  # noqa: E402
 
 PASSWORD = "test-password-1"
@@ -155,6 +155,47 @@ class RealRulesFileTests(unittest.TestCase):
         with mock.patch.object(status_rules, "load_rules", return_value=broken):
             problems = status_rules.find_rules_problems()
         self.assertEqual(problems, ["pulse.bpm: 'simulation' must lie inside 'limits'"])
+
+
+# Code was assisted with Claude.
+class PersonalRangeTests(unittest.TestCase):
+
+    # Run with TEST_RULES instead of rules.json, as in RulesTests.
+    def setUp(self):
+        patcher = mock.patch.object(status_rules, "load_rules", return_value=TEST_RULES)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_personal_range_replaces_the_default_for_one_value_only(self):
+        personal = {"pulse": {"bpm": {"normal": [70, 80], "caution": [60, 90]}}}
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 85})["status"], "normal")
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 85}, personal)["status"], "caution")
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 95}, personal)["status"], "urgent")
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 75}, personal)["status"], "normal")
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 150}, personal)["status"], "urgent")
+        # breaths has no personal range, so it keeps its default (15 is normal)
+        self.assertEqual(status_rules.rate_reading("pulse", {"bpm": 75, "breaths": 15}, personal)["status"], "normal")
+
+    def test_problems_are_reported_for_bad_personal_ranges(self):
+        cases = {
+            "Unknown indicator or value": personal_ranges.find_problem("pulse", "nope", [60, 100], [50, 120]),
+            "caution must lie between": personal_ranges.find_problem("pulse", "bpm", [60, 100], [10, 130]),
+            "normal must lie inside caution": personal_ranges.find_problem("pulse", "bpm", [40, 100], [50, 120]),
+            "normal and caution must each be": personal_ranges.find_problem("pulse", "bpm", [100, 60], [50, 120]),
+            "whole numbers": personal_ranges.find_problem("mood", "score", [3.5, 5], [2, 5]),
+        }
+        for expected, problem in cases.items():
+            self.assertIsNotNone(problem, expected)
+            self.assertIn(expected, problem)
+        self.assertIsNone(personal_ranges.find_problem("pulse", "bpm", [70, 110], [50, 120]))
+
+    def test_rows_say_which_values_are_personal(self):
+        personal = {"pulse": {"bpm": {"normal": [70, 110], "caution": [50, 120]}}}
+        rows = {(r["indicatorId"], r["valueKey"]): r for r in personal_ranges.rows(personal)}
+        self.assertTrue(rows[("pulse", "bpm")]["isPersonal"])
+        self.assertEqual(rows[("pulse", "bpm")]["normal"], [70, 110])
+        self.assertEqual(rows[("pulse", "bpm")]["defaultNormal"], [60, 100])
+        self.assertFalse(rows[("pulse", "breaths")]["isPersonal"])
 
 
 class StreakTests(unittest.TestCase):
@@ -725,6 +766,50 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.call("DELETE", url, token=self.superadmin_token)[0], 404)
         self.assertEqual(self.call("GET", "/api/me", token=member_token)[0], 401)  # login ended
         self.assertNotIn(member_id, [m["astronautId"] for m in self.call("GET", f"/api/superadmin/crews/{self.crew_id}/members", token=self.superadmin_token)[1]])
+
+
+# Code was assisted with Claude.
+    def test_superadmin_sets_personal_ranges_for_one_member(self):
+        member_id, member_token, _ = self.make_crew()
+        base = f"/api/superadmin/crews/{self.crew_id}/members/{member_id}/ranges"
+        sa = self.superadmin_token
+        status, rows = self.call("GET", base, token=sa)
+        self.assertEqual(status, 200)
+        bpm = [r for r in rows if r["indicatorId"] == "heart_rate" and r["valueKey"] == "bpm"][0]
+        self.assertFalse(bpm["isPersonal"])
+        self.assertEqual(bpm["normal"], bpm["defaultNormal"])
+
+        # Default: 110 bpm is caution. The superadmin widens this person's normal range.
+        self.assertEqual(self.save_bpm(member_token, 110)[1]["status"], "caution")
+        url = f"{base}/heart_rate/bpm"
+        self.assertEqual(self.call("PUT", url, {"normal": [60, 115], "caution": [50, 120]}, sa)[0], 200)
+        self.assertEqual(self.save_bpm(member_token, 110)[1]["status"], "normal")
+        rows = self.call("GET", base, token=sa)[1]
+        bpm = [r for r in rows if r["indicatorId"] == "heart_rate" and r["valueKey"] == "bpm"][0]
+        self.assertTrue(bpm["isPersonal"])
+        self.assertEqual(bpm["normal"], [60, 115])
+        # Mission control sees the same personal rating in the crew list.
+        crew = self.call("GET", "/api/admin/astronauts", token=self.admin_token)[1]
+        self.assertEqual([c["status"] for c in crew if c["astronautId"] == member_id], ["normal"])
+
+        # Invalid ranges are refused and nothing is saved.
+        self.assertEqual(self.call("PUT", url, {"normal": [40, 100], "caution": [50, 120]}, sa)[0], 422)
+        self.assertEqual(self.call("PUT", url, {"normal": [60, 100], "caution": [10, 130]}, sa)[0], 422)
+        self.assertEqual(self.call("PUT", f"{base}/heart_rate/nope", {"normal": [60, 100], "caution": [50, 120]}, sa)[0], 422)
+        self.assertEqual(self.call("PUT", url, {"normal": [60, 100]}, sa)[0], 422)
+        # Only the superadmin, and only for members of that crew.
+        self.assertEqual(self.call("PUT", url, {"normal": [60, 100], "caution": [50, 120]}, self.admin_token)[0], 403)
+        self.assertEqual(self.call("GET", base, token=self.admin_token)[0], 403)
+        other_crew_id, _ = self.create_crew_with_admin(sa)
+        self.assertEqual(self.call("GET", f"/api/superadmin/crews/{other_crew_id}/members/{member_id}/ranges", token=sa)[0], 404)
+
+        # Reset: the default range is used again.
+        self.assertEqual(self.call("DELETE", url, token=sa)[0], 200)
+        self.assertEqual(self.call("DELETE", f"{base}/heart_rate/nope", token=sa)[0], 404)
+        self.assertEqual(self.save_bpm(member_token, 110)[1]["status"], "caution")
+        rows = self.call("GET", base, token=sa)[1]
+        bpm = [r for r in rows if r["indicatorId"] == "heart_rate" and r["valueKey"] == "bpm"][0]
+        self.assertFalse(bpm["isPersonal"])
 
 
 class DemoDataTests(unittest.TestCase):

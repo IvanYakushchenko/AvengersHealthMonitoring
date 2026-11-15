@@ -69,7 +69,7 @@ def change_password(change: PasswordChange, request: Request, user=Depends(auth.
 # Save a reading and return its rating. Rejects readings we cannot rate.
 @router.post("/readings", response_model=StatusResult)
 def create_reading(reading: Reading, astronaut=Depends(auth.current_astronaut)):
-    result = health.check_reading(reading.indicatorId, reading.values, reading.takenAt)
+    result = health.check_reading(reading.indicatorId, reading.values, reading.takenAt, astronaut["personal_ranges"])
     database.save_reading(astronaut["id"], reading.indicatorId, reading.values, reading.takenAt)
     return result
 
@@ -97,7 +97,7 @@ def own_reading(reading_id, astronaut):
 @router.put("/readings/{reading_id}", response_model=StatusResult)
 def edit_reading(reading_id: int, update: ReadingUpdate, astronaut=Depends(auth.current_astronaut)):
     reading = own_reading(reading_id, astronaut)
-    result = health.check_reading(reading["indicatorId"], update.values, update.takenAt)
+    result = health.check_reading(reading["indicatorId"], update.values, update.takenAt, astronaut["personal_ranges"])
     database.update_reading(reading_id, update.values, update.takenAt or reading["takenAt"])
     return result
 

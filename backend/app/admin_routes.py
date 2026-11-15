@@ -50,7 +50,7 @@ def list_crew(admin=Depends(auth.current_admin)):
     latest_for_crew = database.get_latest_readings_for_crew(admin["crew_id"])
     crew = []
     for astronaut in database.list_crew(admin["crew_id"]):
-        statuses = health.rate_latest(latest_for_crew.get(astronaut["id"], {})).values()
+        statuses = health.rate_latest(latest_for_crew.get(astronaut["id"], {}), astronaut["personal_ranges"]).values()
         crew.append({
             "astronautId": astronaut["id"],
             "username": astronaut["username"],

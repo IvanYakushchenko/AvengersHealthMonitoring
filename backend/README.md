@@ -172,6 +172,9 @@ gets **404**.
 | DELETE | `/api/superadmin/crews/{id}` | Delete a crew. Only an empty crew can be deleted (409 if it still has members or mission control) |
 | GET | `/api/superadmin/crews/{id}/admins` | The mission control accounts of one crew |
 | POST | `/api/superadmin/crews/{id}/admins` | Create a mission control account for a crew: `{username, password}` |
+| GET | `/api/superadmin/crews/{id}/members/{astronautId}/ranges` | Every value with its default ranges and the ranges this member uses (`isPersonal` tells them apart) |
+| PUT | `/api/superadmin/crews/{id}/members/{astronautId}/ranges/{indicatorId}/{valueKey}` | Set a personal range: `{normal: [min, max], caution: [min, max]}`. 422 if outside the limits or out of order |
+| DELETE | `/api/superadmin/crews/{id}/members/{astronautId}/ranges/{indicatorId}/{valueKey}` | Remove a personal range, so the default applies again |
 | PUT | `/api/admin/readings/{id}` | Correct any reading: `{values, takenAt?}` |
 | DELETE | `/api/admin/readings/{id}` | Delete any reading |
 
@@ -254,6 +257,17 @@ Each value has three ranges, written as `[min, max]` with both ends included:
 
 If an indicator has several values, it gets the worst of their ratings.
 
+### Personal ranges
+
+The superadmin can give one crew member their own `normal` and `caution` ranges for
+any value (for example, a crew member whose resting heart rate is usually higher).
+Only the changed values are stored, on the astronaut's account (`personal_ranges`
+column). The `limits` from `rules.json` still apply, and the normal range must lie
+inside the caution range. Every rating uses these ranges: the member's own
+readings, the superadmin's view and mission control's crew list. Removing a range
+restores the default. Ratings are worked out when needed, so a change applies to
+old readings too.
+
 Optional flags per value:
 - `"optional": true`: the value may be left out
 - `"wholeNumber": true`: decimals are rejected (used for 1-5 scales and `newBlur`)
@@ -296,7 +310,7 @@ Three tables, created automatically on first start:
 | Table | Columns | Holds |
 |---|---|---|
 | `crews` | `id`, `name`, `created_at` | One row per crew |
-| `astronauts` | `id`, `username`, `password_hash`, `is_admin`, `is_superadmin`, `sex`, `crew_id`, `created_at` | One row per account (crew, mission control and superadmin) |
+| `astronauts` | `id`, `username`, `password_hash`, `is_admin`, `is_superadmin`, `sex`, `crew_id`, `created_at`, `personal_ranges` | One row per account (crew, mission control and superadmin). `personal_ranges` is JSON `{indicator: {value: {normal, caution}}}` and is empty for most accounts |
 | `sessions` | `token` (hashed), `astronaut_id`, `created_at` | One row per login token |
 | `readings` | `id`, `astronaut_id`, `indicator_id`, `reading_values`, `taken_at` | One row per measurement |
 
@@ -315,6 +329,7 @@ app/
   admin_routes.py  API endpoints for mission control of one crew (/api/admin/...)
   superadmin_routes.py  API endpoints for the superadmin: crews (/api/superadmin/...)
   health.py        reading checks, status per region, alerts (shared by both)
+  personal_ranges.py  the superadmin's personal normal/caution ranges per crew member
   database.py      PostgreSQL: astronauts, sessions and readings tables
   auth.py          password hashing, login tokens, role checks
   create_superadmin.py  terminal script that creates the superadmin account

@@ -95,8 +95,21 @@ def worst_status(statuses):
     return max(statuses, key=lambda s: STATUS_RANK[s])
 
 
+# Code was assisted with Claude.
+# Personal ranges a superadmin set for one crew member:
+# {indicator_id: {value_key: {"normal": [min, max], "caution": [min, max]}}}.
+# Only the values that were changed are stored; all others use the defaults in rules.json.
+# The limits in rules.json still apply to personal ranges.
+def personal_rule(rule, personal, indicator_id, key):
+    override = (personal or {}).get(indicator_id, {}).get(key)
+    if override is None:
+        return rule
+    return {**rule, "normal": override["normal"], "caution": override["caution"]}
+
+
 # Rate a whole reading and return a dict shaped like StatusResult.
-def rate_reading(indicator_id, values):
+# personal = the crew member's personal ranges (see personal_rule), or None for the defaults.
+def rate_reading(indicator_id, values, personal=None):
     indicator_rules = get_indicator_rules(indicator_id)
     if indicator_rules is None:
         return unknown_result(indicator_id, "No rules for this indicator yet.")
@@ -106,16 +119,17 @@ def rate_reading(indicator_id, values):
             return unknown_result(indicator_id, f"Unknown value: {key}")
 
     statuses = []
-    for key, rule in indicator_rules["values"].items():
+    for key, default_rule in indicator_rules["values"].items():
         if key not in values:
-            if rule.get("optional"):
+            if default_rule.get("optional"):
                 continue
             return unknown_result(indicator_id, f"Missing value: {key}")
-        low, high = rule["limits"]
+        low, high = default_rule["limits"]
         if not low <= values[key] <= high:
             return unknown_result(indicator_id, f"{key} must be between {low} and {high}")
-        if rule.get("wholeNumber") and values[key] != int(values[key]):
+        if default_rule.get("wholeNumber") and values[key] != int(values[key]):
             return unknown_result(indicator_id, f"{key} must be a whole number")
+        rule = personal_rule(default_rule, personal, indicator_id, key)
         statuses.append(rate_value(values[key], rule))
 
     status = worst_status(statuses)
