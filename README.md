@@ -39,6 +39,21 @@ cd AvengersHealthMonitoring
 
 ## 2. Connect the backend to a database
 
+You can use a database on your own computer, or a hosted one (Neon). Choose one of the two options below.
+
+**Option A: local PostgreSQL (no account needed)**
+
+Install PostgreSQL and start it (macOS: `brew install postgresql@17 && brew services start postgresql@17`;
+Windows: installer from https://www.postgresql.org/download/; Linux: `sudo apt install postgresql`). Then run:
+
+```bash
+./scripts/setup-local-db.sh
+```
+
+It creates the database `avengers` and writes `backend/.env`. If `backend/.env` already exists, it is not changed.
+
+**Option B: hosted database (Neon)**
+
 Create the file `backend/.env` (it is ignored by Git, so your password stays private):
 
 ```bash
