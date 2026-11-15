@@ -11,6 +11,7 @@ import {
   Trash2,
   KeyRound,
   ArrowLeft,
+  BookOpen,
 } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 import {
@@ -35,6 +36,8 @@ interface IndicationsPageProps {
   // false for mission control, which cannot log readings for itself.
   canLog: boolean;
   onBack?: () => void;
+  // Shown only for crew members: opens the tutorial again.
+  onOpenTutorial?: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
   onSessionExpired: () => void;
@@ -53,6 +56,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
   sex,
   canLog,
   onBack,
+  onOpenTutorial,
   onChangePassword,
   onLogout,
   onSessionExpired,
@@ -267,6 +271,15 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back
+              </button>
+            )}
+            {onOpenTutorial && (
+              <button
+                onClick={onOpenTutorial}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Tutorial
               </button>
             )}
             <button

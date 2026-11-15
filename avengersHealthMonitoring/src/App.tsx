@@ -5,6 +5,8 @@ import { IndicationsPage } from './features/indications'
 import { AdminPage } from './features/admin/AdminPage'
 import { SuperadminPage } from './features/superadmin/SuperadminPage'
 import { ChangePasswordDialog } from './features/account/ChangePasswordDialog'
+import { CrewTutorial } from './features/tutorial/CrewTutorial'
+import { hasSeenTutorial, markTutorialSeen } from './features/tutorial/tutorialSeen'
 import {
   authApi,
   crewMemberSource,
@@ -20,13 +22,21 @@ function App() {
   const [selectedCrew, setSelectedCrew] = useState<CrewMember | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  // The crew tutorial: opened after the first login, and from the header button.
+  const [tutorialOpen, setTutorialOpen] = useState(false)
 
   const endSession = useCallback((message: string | null) => {
     setSession(null)
     setSelectedCrew(null)
     setShowPassword(false)
+    setTutorialOpen(false)
     setNotice(message)
   }, [])
+
+  const closeTutorial = useCallback(() => {
+    if (session && !session.isAdmin && !session.isSuperadmin) markTutorialSeen(session.username)
+    setTutorialOpen(false)
+  }, [session])
 
   const logout = useCallback(() => {
     if (session) void authApi.logout(session.token).catch(() => undefined)
@@ -55,6 +65,8 @@ function App() {
         onLogin={(newSession) => {
           setNotice(null)
           setSession(newSession)
+          const isCrew = !newSession.isAdmin && !newSession.isSuperadmin
+          setTutorialOpen(isCrew && !hasSeenTutorial(newSession.username))
         }}
       />
     )
@@ -105,6 +117,7 @@ function App() {
         crewLabel={session.username}
         sex={session.sex}
         canLog
+        onOpenTutorial={() => setTutorialOpen(true)}
         onChangePassword={openPassword}
         onLogout={logout}
         onSessionExpired={sessionExpired}
@@ -115,6 +128,9 @@ function App() {
   return (
     <>
       {page}
+      {tutorialOpen && session && !session.isAdmin && !session.isSuperadmin && (
+        <CrewTutorial onClose={closeTutorial} />
+      )}
       {showPassword && (
         <ChangePasswordDialog
           token={token}
