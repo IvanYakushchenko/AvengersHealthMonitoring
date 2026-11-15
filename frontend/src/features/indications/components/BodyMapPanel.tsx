@@ -1,6 +1,7 @@
 // Code was assisted with Claude.
 import React from 'react';
 import { ShieldAlert, Radio } from 'lucide-react';
+import { STATUS_BADGE, STATUS_LABEL } from '../data/statusStyles';
 import {
   aggregateStatus,
   type AlertStatus,
@@ -66,15 +67,9 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
               Habitat Panel
             </span>
             <span
-              className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
-                habitatStatus === 'nominal'
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : habitatStatus === 'unknown'
-                  ? 'bg-slate-500/20 text-slate-300'
-                  : 'bg-danger/30 text-red-200'
-              }`}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${STATUS_BADGE[habitatStatus]}`}
             >
-              {habitatStatus}
+              {STATUS_LABEL[habitatStatus]}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
@@ -84,10 +79,10 @@ export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
 
         {/* Flight Surgeon Flag Notice */}
         {items.some((i) => i.privateSurgeonFlag) && (
-          <div className="mt-3 p-3 rounded-xl bg-danger/10 border border-danger/30 flex items-start gap-2.5">
-            <ShieldAlert className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+          <div className="mt-3 p-3 rounded-xl bg-amber-300/5 border border-amber-300/20 flex items-start gap-2.5">
+            <ShieldAlert className="w-4 h-4 text-amber-200 shrink-0 mt-0.5" />
             <div className="text-xs text-slate-200">
-              <span className="font-semibold text-danger block">
+              <span className="font-semibold text-amber-200 block">
                 Private Flight Surgeon Flag Active
               </span>
               Behavioral health trend flagged confidentially to ground medical officer.

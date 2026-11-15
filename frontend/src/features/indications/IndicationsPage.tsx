@@ -2,18 +2,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LogOut,
-  CheckCircle2,
   AlertTriangle,
-  ShieldAlert,
   SlidersHorizontal,
   Edit3,
   Check,
-  Minus,
   Trash2,
   KeyRound,
   ArrowLeft,
   BookOpen,
   ClipboardList,
+  ChevronDown,
+  MoreHorizontal,
 } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 import {
@@ -30,6 +29,8 @@ import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
 import { ModelPanel } from './components/ModelPanel';
 import { AttentionGuide, type AttentionItem } from './components/AttentionGuide';
+import { DropdownMenu, type MenuItem } from './components/DropdownMenu';
+import { STATUS_BADGE, STATUS_LABEL, CARD_BORDER } from './data/statusStyles';
 
 // Props of the indications page. The data source decides whose health is shown and whether readings can be logged.
 interface IndicationsPageProps {
@@ -81,6 +82,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
   // The "What to do now" guide for indicators that need attention.
   const [guideOpen, setGuideOpen] = useState(false);
+  // Which cards have their details (baseline, hazard, alert logic) open.
+  const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Card content with the backend's rating and newest values filled in.
@@ -241,38 +244,14 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
     }
   };
 
-  const renderStatusBadge = (status: AlertStatus, privateFlag?: boolean) => {
-    if (status === 'critical') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-danger/15 text-danger">
-          <ShieldAlert className="w-3.5 h-3.5" />
-          {privateFlag ? 'Surgeon Flag' : 'Alert'}
-        </span>
-      );
-    }
-    if (status === 'warning') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300">
-          <AlertTriangle className="w-3.5 h-3.5" />
-          Trend Watch
-        </span>
-      );
-    }
-    if (status === 'unknown') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-300">
-          <Minus className="w-3.5 h-3.5" />
-          No data
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300">
-        <CheckCircle2 className="w-3.5 h-3.5" />
-        Nominal
-      </span>
-    );
-  };
+  // A small coloured pill with the status label (red only for "Alert").
+  const renderStatusBadge = (status: AlertStatus, privateFlag?: boolean) => (
+    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${STATUS_BADGE[status]}`}>
+      {privateFlag ? 'Surgeon Flag' : STATUS_LABEL[status]}
+    </span>
+  );
+
+  const criticalCount = allItems.filter((i) => i.status === 'critical').length;
 
   // Indicators that need attention right now, for the guide (caution and urgent readings).
   const attentionItems: AttentionItem[] = allItems
@@ -284,106 +263,104 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
       message: item.message,
     }));
 
+  // The one-line summary shown in the header.
+  const summary =
+    criticalCount > 0
+      ? { text: `${criticalCount} urgent`, cls: STATUS_BADGE.critical }
+      : attentionItems.length > 0
+      ? { text: `${attentionItems.length} need attention`, cls: STATUS_BADGE.warning }
+      : { text: 'All normal', cls: STATUS_BADGE.nominal };
+
+  // Items of the Account menu in the header.
+  const accountItems: MenuItem[] = [
+    ...(canLog
+      ? [
+          {
+            label: 'What to do',
+            icon: <ClipboardList className="w-3.5 h-3.5" />,
+            badge:
+              attentionItems.length > 0 ? (
+                <span className="rounded-full bg-amber-300/15 px-1.5 text-[10px] text-amber-200">{attentionItems.length}</span>
+              ) : undefined,
+            onSelect: () => setGuideOpen(true),
+          },
+        ]
+      : []),
+    ...(onOpenTutorial
+      ? [{ label: 'Tutorial', icon: <BookOpen className="w-3.5 h-3.5" />, onSelect: onOpenTutorial }]
+      : []),
+    { label: 'Change password', icon: <KeyRound className="w-3.5 h-3.5" />, onSelect: onChangePassword },
+  ];
+
   const nominalCount = allItems.filter((i) => i.status === 'nominal').length;
-  const alertCount = allItems.filter((i) => i.status === 'warning' || i.status === 'critical').length;
 
   return (
-    <div className="starfield min-h-screen text-slate-200 flex flex-col">
+    <div className="starfield min-h-screen text-slate-300 flex flex-col">
       {/* Top Dark Header */}
-      <header className="bg-night/80 backdrop-blur text-slate-200 border-b border-white/10 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/mission-logo.png" alt="" className="w-10 h-10 rounded-full object-cover scale-110 ring-1 ring-white/10" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-sm sm:text-base tracking-tight">
-                  Astronaut Health Monitor
-                </h1>
-                <span className="hidden md:inline-block px-2 py-0.5 rounded text-[11px] font-mono bg-ink-soft text-brand-light border border-white/10">
-                  {crewLabel}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                10 Core Physiological & Habitat Indicators
-              </p>
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-night/90 text-slate-300 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/mission-logo.png" alt="" className="w-9 h-9 rounded-full object-cover scale-110" />
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold tracking-tight text-slate-200">Astronaut Health Monitor</h1>
+              <p className="truncate text-xs text-slate-500">{crewLabel}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-5">
-            <div className="hidden sm:flex items-center gap-4 text-xs font-mono">
-              <span className="text-emerald-400">NOMINAL: {nominalCount}/10</span>
-              {alertCount > 0 && <span className="text-red-400">ALERTS: {alertCount}</span>}
-              {snapshot && (
-                <>
-                  <span className="hidden md:inline text-slate-300">STREAK: {snapshot.streak}d</span>
-                  <span className="hidden md:inline text-slate-300">POINTS: {snapshot.points}</span>
-                </>
-              )}
-            </div>
-
+          <div className="flex items-center gap-2">
+            {snapshot && (
+              <span className={`hidden sm:inline-flex rounded-full px-3 py-1 text-xs font-medium ${summary.cls}`}>
+                {summary.text}
+              </span>
+            )}
             {onBack && (
               <button
                 onClick={onBack}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.07] hover:text-slate-100 cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back
               </button>
             )}
-            {canLog && (
-              <button
-                onClick={() => setGuideOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                What to do
-                {attentionItems.length > 0 && (
-                  <span className="rounded-full bg-amber-500/20 px-1.5 text-[10px] text-amber-300">{attentionItems.length}</span>
-                )}
-              </button>
-            )}
-            {onOpenTutorial && (
-              <button
-                onClick={onOpenTutorial}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Tutorial
-              </button>
-            )}
-            <button
-              onClick={onChangePassword}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              Password
-            </button>
+            <DropdownMenu
+              ariaLabel="Account menu"
+              trigger={<span>Menu</span>}
+              items={accountItems}
+            />
             <button
               onClick={onLogout}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.07] hover:text-slate-100 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </header>
 
+      {snapshot && (
+        <div className="mx-auto flex max-w-7xl flex-wrap gap-x-6 gap-y-1 px-4 pt-4 text-xs text-slate-500 sm:px-6">
+          <span>Streak <span className="text-slate-300">{snapshot.streak} days</span></span>
+          <span>Points <span className="text-slate-300">{snapshot.points}</span></span>
+          <span>Normal <span className="text-slate-300">{nominalCount} of 10</span></span>
+        </div>
+      )}
+
       {/* Backend status message */}
       {(error || loading || actionError) && (
         <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 space-y-2">
           {error ? (
-            <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-slate-200 flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-3 text-sm text-slate-300 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-200 shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-danger block">Backend not available</span>
+                <span className="font-semibold text-amber-200 block">Backend not available</span>
                 {error} Values and statuses are not shown until it is running again.
               </div>
             </div>
           ) : loading ? (
             <p className="text-xs text-slate-400">Loading readings…</p>
           ) : null}
-          {actionError && <p className="text-sm text-red-300">{actionError}</p>}
+          {actionError && <p className="text-sm text-amber-200">{actionError}</p>}
         </div>
       )}
 
@@ -435,7 +412,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
               ) : (
                 <span className="text-xs text-slate-400">Enter each reading with Log</span>
               )}
-              {generateError && <p className="w-full text-xs text-red-300">{generateError}</p>}
+              {generateError && <p className="w-full text-xs text-amber-200">{generateError}</p>}
             </div>
           )}
 
@@ -478,27 +455,21 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                     return (
                       <article
                         key={item.id}
-                        className={`indication-card bg-panel rounded-xl border p-4 shadow-md transition-all ${
-                          item.status === 'critical'
-                            ? 'border-danger/50 ring-1 ring-danger/20'
-                            : item.status === 'warning'
-                            ? 'border-amber-400/60'
-                            : 'border-white/10 hover:border-brand-light/60'
-                        }`}
+                        className={`indication-card rounded-xl border bg-panel/70 p-4 transition-colors hover:bg-panel ${CARD_BORDER[item.status]}`}
                       >
-                        {/* Card Top Row */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="inline-block text-[11px] font-mono uppercase tracking-wider text-brand-light font-semibold">
+                        {/* Top row: region and name on the left, status on the right */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="block text-[10px] font-mono uppercase tracking-wider text-slate-500">
                               {item.region}
                             </span>
-                            <h3 className="text-base font-bold text-slate-200">{item.name}</h3>
+                            <h3 className="mt-0.5 text-sm font-semibold text-slate-200">{item.name}</h3>
                           </div>
                           {renderStatusBadge(item.status, item.privateSurgeonFlag)}
                         </div>
 
                         {/* Value, or the editor for a new reading or a correction */}
-                        <div className="mt-3 p-3 rounded-lg bg-white/5">
+                        <div className="mt-4">
                           {isEditing ? (
                             <div className="w-full space-y-2">
                               <div className="grid grid-cols-2 gap-2">
@@ -535,7 +506,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                                   );
                                 })}
                               </div>
-                              {editError && <p className="text-xs text-red-300">{editError}</p>}
+                              {editError && <p className="text-xs text-amber-200">{editError}</p>}
                               <div className="flex justify-end gap-2">
                                 <button
                                   type="button"
@@ -558,65 +529,67 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                           ) : (
                             <div className="flex items-center justify-between gap-2">
                               <div>
-                                <div className="text-xl font-bold font-mono text-slate-200">
+                                <div className="text-2xl font-semibold tracking-tight font-mono text-slate-100">
                                   {item.currentValue}
-                                </div>
-                                <div className="text-[11px] text-slate-400">
-                                  Baseline: {item.baseline}
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Actions */}
+                        {/* Footer: the main action, a Details toggle, and a menu for correcting or deleting the latest reading */}
                         {!isEditing && (
-                          <div className="mt-2 flex flex-wrap justify-end gap-2">
-                            {canLog && mode === 'manual' && (
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {canLog && mode === 'manual' && (
+                                <button
+                                  onClick={() => startNew(item)}
+                                  className="inline-flex items-center gap-1.5 rounded-md bg-brand/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand cursor-pointer"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  Log
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
                               <button
-                                onClick={() => startNew(item)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+                                type="button"
+                                onClick={() => setOpenDetails((d) => ({ ...d, [item.id]: !d[item.id] }))}
+                                aria-expanded={!!openDetails[item.id]}
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
                               >
-                                <Edit3 className="w-3.5 h-3.5 text-brand-light" />
-                                Log
+                                Details
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDetails[item.id] ? 'rotate-180' : ''}`} />
                               </button>
-                            )}
-                            {latest && source.canEdit && (
-                              <>
-                                <button
-                                  onClick={() => startCorrect(item, latest)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5 text-brand-light" />
-                                  Correct
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(latest)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-danger text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-danger" />
-                                  Delete
-                                </button>
-                              </>
-                            )}
+                              {latest && source.canEdit && (
+                                <DropdownMenu
+                                  ariaLabel={`More actions for ${item.name}`}
+                                  trigger={<MoreHorizontal className="w-3.5 h-3.5" />}
+                                  items={[
+                                    { label: 'Correct latest reading', icon: <Edit3 className="w-3.5 h-3.5" />, onSelect: () => startCorrect(item, latest) },
+                                    { label: 'Delete latest reading', icon: <Trash2 className="w-3.5 h-3.5" />, onSelect: () => handleDelete(latest) },
+                                  ]}
+                                />
+                              )}
+                            </div>
                           </div>
                         )}
 
-                        {/* Backend explanation of the latest rating */}
-                        {item.message && (
-                          <p className="mt-2 text-xs text-slate-200">{item.message}</p>
-                        )}
+                        {/* A short explanation of the rating, from the backend */}
+                        {item.message && <p className="mt-2 text-xs text-slate-400">{item.message}</p>}
 
-                        {/* Hazard & Alert Logic Metadata */}
-                        <div className="mt-3 space-y-1 text-xs text-slate-400">
-                          <p>
-                            <span className="font-semibold text-slate-200">Hazard:</span> {item.hazard}
-                          </p>
-                          <p>
-                            <span className="font-semibold text-slate-200">Alert logic:</span>{' '}
-                            {item.alertLogic}
-                          </p>
-                        </div>
+                        {/* Details are hidden until asked for, to keep the card calm */}
+                        {openDetails[item.id] && (
+                          <div className="mt-3 space-y-1 border-t border-white/5 pt-3 text-xs text-slate-500">
+                            <p>Baseline: {item.baseline}</p>
+                            <p>
+                              <span className="text-slate-400">Hazard:</span> {item.hazard}
+                            </p>
+                            <p>
+                              <span className="text-slate-400">Alert logic:</span> {item.alertLogic}
+                            </p>
+                          </div>
+                        )}
                       </article>
                     );
                   })}

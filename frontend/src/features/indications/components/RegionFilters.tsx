@@ -1,6 +1,7 @@
 // Code was assisted with Claude.
 import { Layers } from 'lucide-react';
 import { aggregateStatus, type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups';
+import { STATUS_DOT } from '../data/statusStyles';
 
 // The six region buttons under the 3D model, with the indicators each one filters.
 const REGIONS: { id: BodyRegion; label: string }[] = [
@@ -25,12 +26,7 @@ function regionStatus(items: IndicationItem[], region: BodyRegion): AlertStatus 
 }
 
 // The colour of the status dot for each status.
-const DOT_CLASS: Record<AlertStatus, string> = {
-  critical: 'bg-danger',
-  warning: 'bg-amber-500',
-  nominal: 'bg-emerald-500',
-  unknown: 'bg-slate-500',
-};
+const DOT_CLASS = STATUS_DOT
 
 // Region quick-select buttons, shown under the 3D model.
 export function RegionFilters({ items, selectedRegion, onSelectRegion }: RegionFiltersProps) {
