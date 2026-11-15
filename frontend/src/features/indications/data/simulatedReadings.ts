@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import type { IndicatorInfo } from '../../../api/healthApi'
 
 // Random values for the simulated sensors (auto mode). The ranges come from the backend's

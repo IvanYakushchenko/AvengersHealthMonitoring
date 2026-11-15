@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { Layers } from 'lucide-react';
 import { aggregateStatus, type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups';
 

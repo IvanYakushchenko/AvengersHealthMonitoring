@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 // Typed client for the AvengersHealthMonitoring backend (its README lists every endpoint).
 
 // Backend ratings. The indications page maps them to its own AlertStatus values.

@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 // The body regions the indicators belong to. The names match the 3D model and the region buttons.
 export type BodyRegion =
   | 'Heart'

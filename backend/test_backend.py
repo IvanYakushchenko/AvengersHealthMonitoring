@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 # Automated tests for the backend. Run them from the project folder:
 #
 #     python -m unittest -v

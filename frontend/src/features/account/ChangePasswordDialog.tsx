@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useState, type FormEvent } from 'react';
 import { KeyRound, X } from 'lucide-react';
 import { ApiError, authApi } from '../../api/healthApi';

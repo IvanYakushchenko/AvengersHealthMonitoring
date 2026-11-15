@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 # Create the superadmin account from the terminal. The superadmin creates crews and their
 # mission control accounts. Run from the project folder:  python -m app.create_superadmin
 # This is the only way to make a superadmin, so nobody can make themselves one through the API.

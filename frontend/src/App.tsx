@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import './App.css'
 import { LoginPage } from './features/login'

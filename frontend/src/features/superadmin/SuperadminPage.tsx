@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Activity, Building2, KeyRound, LogOut, Plus, Trash2, UserPlus, Users } from 'lucide-react';
 import {

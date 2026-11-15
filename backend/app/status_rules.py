@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 import json
 from pathlib import Path
 

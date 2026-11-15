@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, authApi, isUnauthorized } from './healthApi'
 

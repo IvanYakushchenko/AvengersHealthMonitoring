@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 from datetime import datetime, timedelta, timezone
 
 from app import database, status_rules

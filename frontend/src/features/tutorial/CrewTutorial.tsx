@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 

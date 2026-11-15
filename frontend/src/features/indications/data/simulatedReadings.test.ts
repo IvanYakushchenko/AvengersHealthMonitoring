@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { describe, expect, it } from 'vitest'
 import { generateReadingValues } from './simulatedReadings'
 import type { IndicatorInfo, ValueRule } from '../../../api/healthApi'

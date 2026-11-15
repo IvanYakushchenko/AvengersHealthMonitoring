@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 import hashlib
 import hmac
 import secrets

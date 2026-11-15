@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LogOut,
@@ -12,6 +13,7 @@ import {
   KeyRound,
   ArrowLeft,
   BookOpen,
+  ClipboardList,
 } from 'lucide-react';
 import { animate, stagger } from 'animejs';
 import {
@@ -27,6 +29,7 @@ import { ApiError, type HealthSource, type Reading, type Sex } from '../../api/h
 import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
 import { ModelPanel } from './components/ModelPanel';
+import { AttentionGuide, type AttentionItem } from './components/AttentionGuide';
 
 // Props of the indications page. The data source decides whose health is shown and whether readings can be logged.
 interface IndicationsPageProps {
@@ -76,6 +79,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [lastGenerated, setLastGenerated] = useState<string | null>(null);
+  // The "What to do now" guide for indicators that need attention.
+  const [guideOpen, setGuideOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Card content with the backend's rating and newest values filled in.
@@ -269,6 +274,16 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
     );
   };
 
+  // Indicators that need attention right now, for the guide (caution and urgent readings).
+  const attentionItems: AttentionItem[] = allItems
+    .filter((item) => item.status === 'warning' || item.status === 'critical')
+    .map((item) => ({
+      indicatorId: BINDING_BY_ITEM_ID[item.id].indicatorId,
+      name: item.name,
+      status: item.status as 'warning' | 'critical',
+      message: item.message,
+    }));
+
   const nominalCount = allItems.filter((i) => i.status === 'nominal').length;
   const alertCount = allItems.filter((i) => i.status === 'warning' || i.status === 'critical').length;
 
@@ -313,6 +328,18 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back
+              </button>
+            )}
+            {canLog && (
+              <button
+                onClick={() => setGuideOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                What to do
+                {attentionItems.length > 0 && (
+                  <span className="rounded-full bg-amber-500/20 px-1.5 text-[10px] text-amber-300">{attentionItems.length}</span>
+                )}
               </button>
             )}
             {onOpenTutorial && (
@@ -605,6 +632,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
           <ModelPanel sex={sex} items={allItems} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
         </div>
       </main>
+
+      {guideOpen && <AttentionGuide items={attentionItems} rules={rules} onClose={() => setGuideOpen(false)} />}
     </div>
   );
 };

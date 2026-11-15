@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException

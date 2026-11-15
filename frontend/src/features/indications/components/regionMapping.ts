@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import type { BodyRegion } from '../data/indicationGroups'
 
 // Keywords matched against node names in the Z-Anatomy models, so parts of the

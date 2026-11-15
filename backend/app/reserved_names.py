@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 import re
 
 from fastapi import HTTPException

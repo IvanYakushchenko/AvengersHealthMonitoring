@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { animate, stagger } from 'animejs'
 import { Eye, EyeOff, Loader2, LogIn, Lock, User } from 'lucide-react'

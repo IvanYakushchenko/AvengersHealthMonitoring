@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useCallback, useEffect, useState } from 'react';
 import {
   authApi,

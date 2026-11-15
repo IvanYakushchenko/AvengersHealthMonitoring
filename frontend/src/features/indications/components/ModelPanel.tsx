@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useEffect, useState } from 'react';
 import { HumanModel3D, MODEL_FILES, type BodySex } from './HumanModel3D';
 import type { BodyRegion, IndicationItem } from '../data/indicationGroups';

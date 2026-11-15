@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 import atexit
 import hashlib
 import os

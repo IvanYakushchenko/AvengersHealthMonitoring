@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import type { BackendStatus } from '../../../api/healthApi';
 import type { AlertStatus } from './indicationGroups';
 

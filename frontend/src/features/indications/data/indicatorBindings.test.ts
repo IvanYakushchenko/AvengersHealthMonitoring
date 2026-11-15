@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { describe, expect, it } from 'vitest'
 import { BINDING_BY_ITEM_ID, INDICATOR_BINDINGS, toAlertStatus } from './indicatorBindings'
 import { INITIAL_INDICATION_GROUPS, aggregateStatus } from './indicationGroups'

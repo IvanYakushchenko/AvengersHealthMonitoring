@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 from datetime import datetime
 from typing import Literal
 

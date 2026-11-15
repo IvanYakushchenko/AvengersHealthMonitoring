@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app import auth, checklist, database, health, reserved_names

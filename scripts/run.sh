@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Code was assisted with Claude.
 # Runs the whole project: the backend API on http://localhost:8000 and the web app on
 # http://localhost:5173. Press Ctrl+C to stop both.
 set -euo pipefail

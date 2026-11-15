@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useEffect, useRef } from 'react'
 import { animate } from 'animejs'
 

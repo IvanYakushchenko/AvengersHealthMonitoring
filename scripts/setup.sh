@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Code was assisted with Claude.
 # Installs everything the project needs: the backend's Python packages and the frontend's npm packages.
 # Safe to run again. Used by run.sh and test.sh.
 set -euo pipefail

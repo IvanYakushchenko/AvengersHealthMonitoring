@@ -1,3 +1,4 @@
+# Code was assisted with Claude.
 import os
 
 from fastapi import FastAPI

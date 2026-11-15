@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import React from 'react';
 import { ShieldAlert, Radio } from 'lucide-react';
 import {

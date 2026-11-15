@@ -1,3 +1,4 @@
+// Code was assisted with Claude.
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, AlertTriangle, ShieldAlert, Minus, LogOut, KeyRound, Eye, Trash2, UserPlus } from 'lucide-react';
 import {
