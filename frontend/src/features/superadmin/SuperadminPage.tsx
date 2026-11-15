@@ -10,6 +10,7 @@ import {
 } from '../../api/healthApi';
 import { IndicationsPage } from '../indications';
 
+// Props of the superadmin page: the login and the actions that work on the whole app.
 interface SuperadminPageProps {
   token: string;
   username: string;
@@ -20,13 +21,17 @@ interface SuperadminPageProps {
 
 // Same username rule as the backend (3-30 letters, digits, "_", "." or "-").
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
+// Same minimum as the backend's password rule.
 const MIN_PASSWORD_LENGTH = 8;
 
+// Shared styles for the buttons on this page.
 const buttonClass =
   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-60';
+// Shared styles for the text inputs on this page.
 const inputClass =
   'px-2.5 py-1.5 text-sm text-slate-200 bg-panel border border-white/15 rounded-md focus:outline-none focus:border-brand';
 
+// The message to show for an error: the server's text when there is one, otherwise the fallback.
 function errorText(err: unknown, fallback: string) {
   return err instanceof Error ? err.message : fallback;
 }

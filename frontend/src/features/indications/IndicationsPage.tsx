@@ -28,6 +28,7 @@ import { useHealthData } from './hooks/useHealthData';
 import { BodyMapPanel } from './components/BodyMapPanel';
 import { ModelPanel } from './components/ModelPanel';
 
+// Props of the indications page. The data source decides whose health is shown and whether readings can be logged.
 interface IndicationsPageProps {
   source: HealthSource;
   // Shown in the header: the crew member's name, or "Crew: <name>" for mission control.
@@ -51,6 +52,7 @@ interface Editor {
   readingId?: number;
 }
 
+// The crew page with the 10 indicator cards, the body model and the region map. Used by crew members, and by mission control and the superadmin in read-only or limited views.
 export const IndicationsPage: React.FC<IndicationsPageProps> = ({
   source,
   crewLabel,

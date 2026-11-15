@@ -17,6 +17,7 @@ export interface IndicatorBinding {
   format: (v: Record<string, number>) => string;
 }
 
+// Links every card to its backend indicator and describes how to show its value. The limits for the input fields come from the backend, not from here.
 export const INDICATOR_BINDINGS: IndicatorBinding[] = [
   {
     itemId: 'resting-hr',
@@ -102,10 +103,12 @@ export const INDICATOR_BINDINGS: IndicatorBinding[] = [
   },
 ];
 
+// The same bindings, looked up by card id.
 export const BINDING_BY_ITEM_ID: Record<string, IndicatorBinding> = Object.fromEntries(
   INDICATOR_BINDINGS.map((b) => [b.itemId, b]),
 );
 
+// All backend indicator ids the page needs, in order.
 export const BACKEND_INDICATOR_IDS: string[] = INDICATOR_BINDINGS.map((b) => b.indicatorId);
 
 // Backend ratings use normal/caution/urgent. The UI uses nominal/warning/critical.

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { animate } from 'animejs'
 
+// True when the user asks the system to reduce motion. The heartbeat line is then drawn without animation.
 const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 

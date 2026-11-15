@@ -3,6 +3,7 @@
 // Backend ratings. The indications page maps them to its own AlertStatus values.
 export type BackendStatus = 'normal' | 'caution' | 'urgent' | 'unknown';
 
+// A rating for one indicator, as the backend returns it (normal, caution, urgent or unknown).
 export interface StatusResult {
   indicatorId: string;
   status: BackendStatus;
@@ -10,12 +11,14 @@ export interface StatusResult {
   escalate: boolean;
 }
 
+// The rating of one body region, with the ratings of the indicators in it.
 export interface RegionStatus {
   regionId: string;
   status: BackendStatus;
   indicators: StatusResult[];
 }
 
+// Answer of GET /api/status: all body regions.
 export interface StatusOverview {
   regions: RegionStatus[];
 }
@@ -28,12 +31,14 @@ export interface Reading {
   takenAt: string;
 }
 
+// A reading to save. takenAt is optional; the server uses the current time when it is missing.
 export interface NewReading {
   indicatorId: string;
   values: Record<string, number>;
   takenAt?: string;
 }
 
+// Answer of GET /api/checklist: which measurements are due, plus streak and points.
 export interface Checklist {
   items: { indicatorId: string; due: boolean; lastTakenAt: string | null }[];
   streak: number;
@@ -47,6 +52,7 @@ export interface SimulationRange {
   whole?: boolean;
 }
 
+// The rules for one value of an indicator (allowed limits, normal and caution ranges, optional flags, simulation range).
 export interface ValueRule {
   limits: [number, number];
   normal: [number, number];
@@ -56,6 +62,7 @@ export interface ValueRule {
   simulation?: SimulationRange | null;
 }
 
+// One indicator with its region and value rules, from GET /api/indicators.
 export interface IndicatorInfo {
   indicatorId: string;
   region: string;
@@ -106,16 +113,20 @@ function validationMessage(problem: unknown): string {
   return typeof field === 'string' && field !== 'body' ? `${field}: ${msg}` : msg;
 }
 
+// True when the server said the login is missing or expired (HTTP 401). The app then logs out.
 export const isUnauthorized = (err: unknown) => err instanceof ApiError && err.status === 401;
 
+// Where the backend is. Set VITE_API_URL to change it (see frontend/.env.example).
 const API_BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 
+// Options for one request: the login token, the HTTP method and the JSON body.
 interface RequestOptions {
   token?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
 }
 
+// The one function every request goes through. It adds the login token and the JSON body, turns network failures and error answers into ApiError with a readable message, and returns the parsed JSON.
 async function request<T>(path: string, { token, method = 'GET', body }: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -152,6 +163,7 @@ async function request<T>(path: string, { token, method = 'GET', body }: Request
 
 // ---------- accounts ----------
 
+// Login, logout, password change and the public indicator list.
 export const authApi = {
   login: (username: string, password: string) =>
     request<Session>('/api/login', { method: 'POST', body: { username, password } }),
@@ -185,6 +197,7 @@ export interface HealthSource {
   createReading: ((reading: NewReading) => Promise<StatusResult>) | null;
 }
 
+// Health data for the logged-in crew member, using the /api/... endpoints.
 export function crewSource(token: string): HealthSource {
   return {
     canEdit: true,
@@ -201,6 +214,7 @@ export function crewSource(token: string): HealthSource {
   };
 }
 
+// Health data of one crew member as seen by mission control (/api/admin/... endpoints). Read and write, but no new readings.
 export function crewMemberSource(token: string, astronautId: number): HealthSource {
   const base = `/api/admin/astronauts/${astronautId}`;
   return {
@@ -235,6 +249,7 @@ export function superadminMemberSource(token: string, crewId: number, astronautI
 
 // ---------- mission control: crew accounts ----------
 
+// Mission control: list, create, reset the password of, and delete crew members of its own crew.
 export const adminApi = {
   listCrew: (token: string) => request<CrewMember[]>('/api/admin/astronauts', { token }),
 
@@ -258,6 +273,7 @@ export const adminApi = {
 
 // ---------- superadmin: crews and their mission control accounts ----------
 
+// One crew as the superadmin sees it.
 export interface Crew {
   crewId: number;
   name: string;
@@ -266,6 +282,7 @@ export interface Crew {
   adminCount: number;
 }
 
+// One crew member in a crew (passwords are never included).
 export interface CrewMemberInfo {
   astronautId: number;
   username: string;
@@ -273,12 +290,14 @@ export interface CrewMemberInfo {
   createdAt: string;
 }
 
+// One mission control account of a crew.
 export interface CrewAdmin {
   astronautId: number;
   username: string;
   createdAt: string;
 }
 
+// Superadmin: crews, their members and their mission control accounts.
 export const superadminApi = {
   listCrews: (token: string) => request<Crew[]>('/api/superadmin/crews', { token }),
 

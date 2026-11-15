@@ -15,6 +15,9 @@ import {
   type Session,
 } from './api/healthApi'
 
+// The top-level component. It decides which screen to show:
+// the login page, the crew page, the mission control page, or the superadmin page.
+// It keeps the session (token and role) in memory only, so a reload asks for the login again.
 function App() {
   // The session lives in memory only: a page reload asks for the login again.
   const [session, setSession] = useState<Session | null>(null)

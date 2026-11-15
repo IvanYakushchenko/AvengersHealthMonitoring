@@ -3,6 +3,7 @@ import { HumanModel3D, MODEL_FILES, type BodySex } from './HumanModel3D';
 import type { BodyRegion, IndicationItem } from '../data/indicationGroups';
 import { RegionFilters } from './RegionFilters';
 
+// Props of the model panel: the crew member's sex (picks the model) and the indicator data.
 interface ModelPanelProps {
   // The crew member's sex picks the model. null (no sex on the account) shows the male model.
   sex: BodySex | null;
@@ -11,6 +12,7 @@ interface ModelPanelProps {
   onSelectRegion: (region: BodyRegion | 'ALL') => void;
 }
 
+// Text shown above the model.
 const SEX_LABEL: Record<BodySex, string> = { male: 'Male', female: 'Female' };
 
 // Right-side panel with the 3D body model. It fills the height of the screen and

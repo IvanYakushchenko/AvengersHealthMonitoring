@@ -12,6 +12,7 @@ export const MESH_REGION_KEYWORDS: { region: BodyRegion; keywords: string[] }[] 
   { region: 'Whole body', keywords: ['skin', 'body surface'] },
 ]
 
+// Maps a mesh name in a 3D model file to a body region. Returns null for meshes that belong to no region.
 export function regionForMeshName(name: string): BodyRegion | null {
   const lower = name.toLowerCase()
   for (const entry of MESH_REGION_KEYWORDS) {

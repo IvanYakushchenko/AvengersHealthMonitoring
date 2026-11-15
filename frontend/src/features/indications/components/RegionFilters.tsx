@@ -1,6 +1,7 @@
 import { Layers } from 'lucide-react';
 import { aggregateStatus, type AlertStatus, type BodyRegion, type IndicationItem } from '../data/indicationGroups';
 
+// The six region buttons under the 3D model, with the indicators each one filters.
 const REGIONS: { id: BodyRegion; label: string }[] = [
   { id: 'Head', label: 'Head (Sleep / Mood)' },
   { id: 'Eyes', label: 'Eyes (SANS Vision)' },
@@ -10,16 +11,19 @@ const REGIONS: { id: BodyRegion; label: string }[] = [
   { id: 'Legs and spine', label: 'Legs & Spine (Exercise)' },
 ];
 
+// Props of the region buttons: the indicators, the selected region and the callback.
 interface RegionFiltersProps {
   items: IndicationItem[];
   selectedRegion: BodyRegion | 'ALL';
   onSelectRegion: (region: BodyRegion | 'ALL') => void;
 }
 
+// The worst status of the indicators in one region (drives the coloured dot).
 function regionStatus(items: IndicationItem[], region: BodyRegion): AlertStatus {
   return aggregateStatus(items.filter((i) => i.region === region));
 }
 
+// The colour of the status dot for each status.
 const DOT_CLASS: Record<AlertStatus, string> = {
   critical: 'bg-danger',
   warning: 'bg-amber-500',

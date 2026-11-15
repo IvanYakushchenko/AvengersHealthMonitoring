@@ -7,12 +7,14 @@ import {
   type IndicationItem,
 } from '../data/indicationGroups';
 
+// Props of the region map: the indicators, the selected region, and the callback to change it.
 interface BodyMapPanelProps {
   items: IndicationItem[];
   selectedRegion: BodyRegion | 'ALL';
   onSelectRegion: (region: BodyRegion | 'ALL') => void;
 }
 
+// The left-hand panel: the region filter header and the Habitat Panel card (cabin CO₂ and radiation). Clicking a card filters the indicators.
 export const BodyMapPanel: React.FC<BodyMapPanelProps> = ({
   items,
   selectedRegion,

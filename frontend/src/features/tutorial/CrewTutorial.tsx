@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
+// One step of the tutorial: a short title and the text.
 interface Step {
   title: string;
   body: string;
@@ -38,6 +39,7 @@ export const TUTORIAL_STEPS: Step[] = [
   },
 ];
 
+// Props of the tutorial: called when it is closed, by Skip, Finish or Escape.
 interface CrewTutorialProps {
   onClose: () => void;
 }

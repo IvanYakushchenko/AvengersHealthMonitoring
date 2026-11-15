@@ -5,18 +5,22 @@ import NasaLogo from './components/NasaLogo'
 import Heartbeat from './components/Heartbeat'
 import { authApi, type Session } from '../../api/healthApi'
 
+// Props of the login page: the callback on success and an optional notice (for example 'session ended').
 type LoginPageProps = {
   onLogin: (session: Session) => void
   // Shown above the form, e.g. "Your session has ended".
   notice?: string | null
 }
 
+// Validation messages for the two fields.
 type FieldErrors = { username?: string; password?: string }
 
+// True when the user asks the system to reduce motion. Animations are skipped then.
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+// Checks that both fields are filled in. The password length is not checked here: the server decides.
 function validate(username: string, password: string): FieldErrors {
   const errors: FieldErrors = {}
   if (!username.trim()) errors.username = 'Username is required.'
@@ -24,6 +28,7 @@ function validate(username: string, password: string): FieldErrors {
   return errors
 }
 
+// The login screen. It sends the username and password to the backend, shows the server's message on failure, and calls onLogin with the session on success.
 function LoginPage({ onLogin, notice }: LoginPageProps) {
   const cardRef = useRef<HTMLFormElement>(null)
   const [username, setUsername] = useState('')

@@ -1,3 +1,4 @@
+// Props of the mission emblem: its size, set with CSS classes.
 type NasaLogoProps = {
   className?: string
 }

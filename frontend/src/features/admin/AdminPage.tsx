@@ -9,6 +9,7 @@ import {
   type Sex,
 } from '../../api/healthApi';
 
+// Props of the mission control page: the login, the crew it manages, and the actions.
 interface AdminPageProps {
   token: string;
   username: string;
@@ -21,12 +22,15 @@ interface AdminPageProps {
 
 // Same username rule as the backend (3-30 letters, digits, "_", "." or "-").
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
+// Same minimum as the backend's password rule.
 const MIN_PASSWORD_LENGTH = 8;
 
+// The message to show for an error: the server's text when there is one, otherwise the fallback.
 function describe(err: unknown, fallback: string) {
   return err instanceof ApiError || err instanceof Error ? err.message : fallback;
 }
 
+// The coloured badge for a crew member's overall status.
 function StatusBadge({ status }: { status: BackendStatus }) {
   if (status === 'urgent') {
     return (
@@ -60,6 +64,7 @@ function StatusBadge({ status }: { status: BackendStatus }) {
   );
 }
 
+// Shared styles for the buttons on this page.
 const buttonClass =
   'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-panel border border-white/10 hover:border-brand text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-60';
 

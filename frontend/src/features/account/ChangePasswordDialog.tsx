@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { KeyRound, X } from 'lucide-react';
 import { ApiError, authApi } from '../../api/healthApi';
 
+// Same minimum as the backend's password rule.
 const MIN_PASSWORD_LENGTH = 8;
 
+// Props of the password dialog: the login token and what to do on cancel or success.
 interface ChangePasswordDialogProps {
   token: string;
   onCancel: () => void;

@@ -1,3 +1,4 @@
+// The body regions the indicators belong to. The names match the 3D model and the region buttons.
 export type BodyRegion =
   | 'Heart'
   | 'Lungs'
@@ -10,6 +11,7 @@ export type BodyRegion =
 // 'unknown' = no reading yet (or the backend is not reachable). It never looks like a problem.
 export type AlertStatus = 'nominal' | 'warning' | 'critical' | 'unknown';
 
+// One indicator card on the page. Some fields are static text (name, hazard, baseline); the value and status come from the backend.
 export interface IndicationItem {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export interface IndicationItem {
   privateSurgeonFlag?: boolean;
 }
 
+// A titled group of cards on the page (for example Cardiopulmonary & Vitals).
 export interface IndicationGroup {
   id: string;
   title: string;

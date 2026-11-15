@@ -10,6 +10,7 @@ export const MODEL_FILES = {
   male: '/models/male-muscular.glb',
   female: '/models/female-muscular.glb',
 } as const
+// Which body model to show.
 export type BodySex = keyof typeof MODEL_FILES
 
 // The same six hotspots as the 2D body map, placed on the 3D model.
@@ -23,6 +24,7 @@ const STATUS_COLOR: Record<AlertStatus, number> = {
   unknown: 0x64748b,
 }
 
+// The glow colour of an organ when its region has a warning or alert.
 const STATUS_EMISSIVE: Record<AlertStatus, number> = {
   nominal: 0x000000,
   warning: 0x6b4a00,
@@ -30,6 +32,7 @@ const STATUS_EMISSIVE: Record<AlertStatus, number> = {
   unknown: 0x000000,
 }
 
+// Props of the 3D model: the body type, the indicators (for colours), the selected region and the callback.
 interface HumanModel3DProps {
   sex: BodySex
   items: IndicationItem[]
@@ -37,17 +40,20 @@ interface HumanModel3DProps {
   onSelectRegion: (region: BodyRegion | 'ALL') => void
 }
 
+// A mesh of the 3D model that belongs to one body region, so it can be highlighted.
 interface RegionMesh {
   mesh: THREE.Mesh
   region: BodyRegion
 }
 
+// A marker on the 3D model: a sphere (the core) with a pulsing ring around it when the region needs attention.
 interface Hotspot {
   region: BodyRegion
   core: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
   ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>
 }
 
+// The worst status of the indicators in one region (used to colour its marker).
 function regionStatus(items: IndicationItem[], region: BodyRegion): AlertStatus {
   return aggregateStatus(items.filter((i) => i.region === region))
 }
@@ -64,6 +70,7 @@ const FALLBACK_ANCHORS: Record<BodyRegion, [number, number, number]> = {
   'Habitat panel': [0, 0.5, 0],
 }
 
+// Where to put a marker when the model has no named organ mesh: a fixed point on the body, as a fraction of its height and width.
 function fallbackAnchor(region: BodyRegion, box: THREE.Box3, size: THREE.Vector3): THREE.Vector3 {
   const [fx, fy, fz] = FALLBACK_ANCHORS[region]
   return new THREE.Vector3(
@@ -73,11 +80,14 @@ function fallbackAnchor(region: BodyRegion, box: THREE.Box3, size: THREE.Vector3
   )
 }
 
+// Finds which body region a mesh belongs to: an explicit region tag if it has one, otherwise the
+// keywords in its name, or else the name of its parent object (see regionMapping.ts).
 function regionOf(obj: THREE.Object3D): BodyRegion | null {
   if (obj.userData.region) return obj.userData.region as BodyRegion
   return regionForMeshName(obj.name) ?? regionForMeshName(obj.parent?.name ?? '')
 }
 
+// The 3D body model, drawn with three.js. It loads the GLB file for the chosen body type, fits the camera to it, places one marker per region, and lets the user click markers or organs to filter the indicators.
 export function HumanModel3D({ sex, items, selectedRegion, onSelectRegion }: HumanModel3DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const meshesRef = useRef<RegionMesh[]>([])

@@ -9,6 +9,7 @@ import {
 } from '../../../api/healthApi';
 import { BACKEND_INDICATOR_IDS } from '../data/indicatorBindings';
 
+// Everything the page shows at one moment: the ratings, the newest reading of each indicator, and the streak and points.
 export interface HealthSnapshot {
   // Newest rating per backend indicator id.
   statuses: Record<string, StatusResult>;
