@@ -1,0 +1,144 @@
+{
+  "_note": "ESTIMATED values: rough average ranges for healthy adults, not taken from cited sources. For each value: inside 'normal' = normal, inside 'caution' = caution, outside 'caution' = urgent. 'limits' = the only values we accept at all (anything outside is rejected as a typo). All ranges are [min, max], both included. 'dueEveryHours' = how often the checklist asks for this measurement. 'region' = which body region the indicator belongs to. 'optional': true = the value may be left out. 'wholeNumber': true = only whole numbers are accepted (e.g. 1-5 scales).",
+
+  "pointsPerReading": 10,
+
+  "indicators": {
+    "heart_rate": {
+      "region": "heart",
+      "dueEveryHours": 24,
+      "values": {
+        "bpm": { "limits": [20, 250], "normal": [60, 100], "caution": [50, 120], "simulation": { "min": 50, "max": 120, "whole": true } }
+      },
+      "messages": {
+        "normal": "Heart rate is in the normal range.",
+        "caution": "Heart rate is a bit outside the normal range. Rest and measure again later.",
+        "urgent": "Heart rate is far outside the normal range. Contact the flight surgeon."
+      }
+    },
+
+    "blood_pressure": {
+      "region": "heart",
+      "dueEveryHours": 24,
+      "values": {
+        "systolic": { "limits": [50, 260], "normal": [90, 129], "caution": [80, 159], "simulation": { "min": 95, "max": 150, "whole": true } },
+        "diastolic": { "limits": [30, 160], "normal": [60, 84], "caution": [50, 99], "simulation": { "min": 60, "max": 95, "whole": true } }
+      },
+      "messages": {
+        "normal": "Blood pressure is in the normal range.",
+        "caution": "Blood pressure is a bit outside the normal range. Rest and measure again later.",
+        "urgent": "Blood pressure is far outside the normal range. Contact the flight surgeon."
+      }
+    },
+
+    "spo2": {
+      "region": "lungs",
+      "dueEveryHours": 24,
+      "values": {
+        "percent": { "limits": [50, 100], "normal": [95, 100], "caution": [90, 100], "simulation": { "min": 92, "max": 100, "whole": true } },
+        "breathsPerMinute": { "limits": [1, 80], "normal": [12, 20], "caution": [10, 24], "simulation": { "min": 10, "max": 24, "whole": true }, "optional": true }
+      },
+      "messages": {
+        "normal": "Blood oxygen and breathing look normal.",
+        "caution": "Blood oxygen or breathing is slightly off. Check cabin air and measure again.",
+        "urgent": "Blood oxygen or breathing is in the danger range. Contact the flight surgeon now."
+      }
+    },
+
+    "temperature": {
+      "region": "body",
+      "dueEveryHours": 24,
+      "values": {
+        "celsius": { "limits": [30, 45], "normal": [36.1, 37.5], "caution": [35.5, 38.3], "simulation": { "min": 35, "max": 40, "whole": false } }
+      },
+      "messages": {
+        "normal": "Body temperature is normal.",
+        "caution": "Body temperature is slightly off. Drink water, rest and measure again.",
+        "urgent": "Body temperature is far outside the normal range. Contact the flight surgeon."
+      }
+    },
+
+    "sleep": {
+      "region": "head",
+      "dueEveryHours": 24,
+      "values": {
+        "hours": { "limits": [0, 24], "normal": [7, 10], "caution": [5, 12], "simulation": { "min": 4, "max": 9, "whole": false } },
+        "quality": { "limits": [1, 5], "wholeNumber": true, "normal": [3, 5], "caution": [2, 5], "simulation": { "min": 1, "max": 5, "whole": true } }
+      },
+      "messages": {
+        "normal": "Sleep looks good.",
+        "caution": "Sleep was short or poor. Try to protect your next sleep period.",
+        "urgent": "Sleep is very poor. Talk to the flight surgeon about it."
+      }
+    },
+
+    "mood_stress": {
+      "region": "head",
+      "dueEveryHours": 24,
+      "values": {
+        "mood": { "limits": [1, 5], "wholeNumber": true, "normal": [3, 5], "caution": [2, 5], "simulation": { "min": 1, "max": 5, "whole": true } },
+        "stress": { "limits": [1, 5], "wholeNumber": true, "normal": [1, 3], "caution": [1, 4], "simulation": { "min": 1, "max": 5, "whole": true } },
+        "isolation": { "limits": [1, 5], "wholeNumber": true, "normal": [1, 3], "caution": [1, 4], "simulation": { "min": 1, "max": 5, "whole": true } }
+      },
+      "messages": {
+        "normal": "Mood and stress look fine.",
+        "caution": "You seem a bit low or stressed. Take a break or talk to a crewmate.",
+        "urgent": "You seem very low or stressed. Please contact the crew psychologist."
+      }
+    },
+
+    "exercise": {
+      "region": "legs_spine",
+      "dueEveryHours": 24,
+      "values": {
+        "minutes": { "limits": [0, 600], "normal": [90, 240], "caution": [0, 400], "simulation": { "min": 30, "max": 150, "whole": true } },
+        "effort": { "limits": [1, 5], "wholeNumber": true, "normal": [2, 4], "caution": [1, 5], "simulation": { "min": 1, "max": 5, "whole": true } }
+      },
+      "messages": {
+        "normal": "Exercise is on track.",
+        "caution": "Exercise is below or above the daily target. Adjust your next session.",
+        "urgent": "Exercise is far above a safe amount. Talk to the flight surgeon."
+      }
+    },
+
+    "vision": {
+      "region": "eyes",
+      "dueEveryHours": 168,
+      "values": {
+        "newBlur": { "limits": [0, 1], "wholeNumber": true, "normal": [0, 0], "caution": [0, 0], "simulation": { "min": 0, "max": 1, "whole": true } },
+        "clarity": { "limits": [1, 5], "wholeNumber": true, "normal": [4, 5], "caution": [3, 5], "simulation": { "min": 3, "max": 5, "whole": true } }
+      },
+      "messages": {
+        "normal": "Vision looks normal.",
+        "caution": "Vision is a little less clear. Check again in a few days.",
+        "urgent": "New blur or poor vision. Report it to the flight surgeon."
+      }
+    },
+
+    "cabin_co2": {
+      "region": "habitat",
+      "dueEveryHours": 24,
+      "values": {
+        "ppm": { "limits": [0, 50000], "normal": [0, 2600], "caution": [0, 5300], "simulation": { "min": 400, "max": 2000, "whole": true } }
+      },
+      "messages": {
+        "normal": "Cabin CO2 is in the normal range.",
+        "caution": "Cabin CO2 is raised. Watch for headaches and check the air system.",
+        "urgent": "Cabin CO2 is high. Follow the CO2 procedure and contact mission control."
+      }
+    },
+
+    "radiation": {
+      "region": "habitat",
+      "dueEveryHours": 168,
+      "values": {
+        "totalMsv": { "limits": [0, 5000], "normal": [0, 200], "caution": [0, 500], "simulation": { "min": 50, "max": 250, "whole": false } }
+      },
+      "messages": {
+        "normal": "Total radiation dose is within the planned range.",
+        "caution": "Total radiation dose is getting high. Check with mission control.",
+        "urgent": "Total radiation dose is over the limit. Contact mission control."
+      }
+    }
+  }
+}

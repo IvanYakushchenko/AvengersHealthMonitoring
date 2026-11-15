@@ -1,0 +1,14 @@
+# Secrets and local settings: never commit
+.env
+
+# Dependencies and build output
+node_modules/
+dist/
+venv/
+.venv/
+__pycache__/
+
+# Local database files and editor/system files
+*.db
+.idea/
+.DS_Store
