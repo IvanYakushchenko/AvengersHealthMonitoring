@@ -12,6 +12,7 @@ import {
 interface AdminPageProps {
   token: string;
   username: string;
+  crewName: string | null;
   onOpenCrew: (member: CrewMember) => void;
   onChangePassword: () => void;
   onLogout: () => void;
@@ -66,6 +67,7 @@ const buttonClass =
 export function AdminPage({
   token,
   username,
+  crewName,
   onOpenCrew,
   onChangePassword,
   onLogout,
@@ -182,7 +184,7 @@ export function AdminPage({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div>
             <h1 className="font-bold text-sm sm:text-base tracking-tight">Mission Control</h1>
-            <p className="text-xs text-slate-400">Signed in as {username}</p>
+            <p className="text-xs text-slate-400">{crewName ? `Crew: ${crewName} · ` : ''}Signed in as {username}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onChangePassword} className={buttonClass}>

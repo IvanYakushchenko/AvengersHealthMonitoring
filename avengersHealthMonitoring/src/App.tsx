@@ -3,6 +3,7 @@ import './App.css'
 import { LoginPage } from './features/login'
 import { IndicationsPage } from './features/indications'
 import { AdminPage } from './features/admin/AdminPage'
+import { SuperadminPage } from './features/superadmin/SuperadminPage'
 import { ChangePasswordDialog } from './features/account/ChangePasswordDialog'
 import {
   authApi,
@@ -62,7 +63,17 @@ function App() {
   const openPassword = () => setShowPassword(true)
 
   let page: ReactNode
-  if (session.isAdmin) {
+  if (session.isSuperadmin) {
+    page = (
+      <SuperadminPage
+        token={token}
+        username={session.username}
+        onChangePassword={openPassword}
+        onLogout={logout}
+        onSessionExpired={sessionExpired}
+      />
+    )
+  } else if (session.isAdmin) {
     page =
       selectedCrew && memberApi ? (
         <IndicationsPage
@@ -80,6 +91,7 @@ function App() {
         <AdminPage
           token={token}
           username={session.username}
+          crewName={session.crewName}
           onOpenCrew={setSelectedCrew}
           onChangePassword={openPassword}
           onLogout={logout}

@@ -64,7 +64,10 @@ export interface Session {
   astronautId: number;
   username: string;
   isAdmin: boolean;
+  isSuperadmin: boolean;
   sex: Sex | null;
+  crewId: number | null;
+  crewName: string | null;
 }
 
 // One crew account as mission control sees it.
@@ -85,6 +88,14 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+// One validation problem from the server, e.g. "password: String should have at least 8 characters".
+function validationMessage(problem: unknown): string {
+  const { loc, msg } = (problem ?? {}) as { loc?: unknown[]; msg?: unknown };
+  if (typeof msg !== 'string') return 'Please check the values you entered.';
+  const field = Array.isArray(loc) ? loc[loc.length - 1] : undefined;
+  return typeof field === 'string' && field !== 'body' ? `${field}: ${msg}` : msg;
 }
 
 export const isUnauthorized = (err: unknown) => err instanceof ApiError && err.status === 401;
@@ -120,7 +131,7 @@ async function request<T>(path: string, { token, method = 'GET', body }: Request
       if (data && typeof data === 'object' && 'detail' in data) {
         const detail = (data as { detail: unknown }).detail;
         if (typeof detail === 'string') message = detail;
-        else if (Array.isArray(detail) && detail.length > 0) message = 'Please check the values you entered.';
+        else if (Array.isArray(detail) && detail.length > 0) message = validationMessage(detail[0]);
       }
     } catch {
       // Not JSON: keep the generic message.
@@ -155,6 +166,8 @@ export const authApi = {
 // Everything the indications page needs. The crew version uses /api/...,
 // the mission control version uses /api/admin/astronauts/{id}/... for one crew member.
 export interface HealthSource {
+  // false for read-only views: nothing can be corrected or deleted through them.
+  canEdit: boolean;
   getStatus: () => Promise<StatusOverview>;
   getChecklist: () => Promise<Checklist>;
   getReadings: (indicatorId: string, days?: number) => Promise<Reading[]>;
@@ -166,6 +179,7 @@ export interface HealthSource {
 
 export function crewSource(token: string): HealthSource {
   return {
+    canEdit: true,
     getStatus: () => request<StatusOverview>('/api/status', { token }),
     getChecklist: () => request<Checklist>('/api/checklist', { token }),
     getReadings: (indicatorId, days = 365) =>
@@ -182,6 +196,7 @@ export function crewSource(token: string): HealthSource {
 export function crewMemberSource(token: string, astronautId: number): HealthSource {
   const base = `/api/admin/astronauts/${astronautId}`;
   return {
+    canEdit: true,
     getStatus: () => request<StatusOverview>(`${base}/status`, { token }),
     getChecklist: () => request<Checklist>(`${base}/checklist`, { token }),
     getReadings: (indicatorId, days = 365) =>
@@ -190,6 +205,22 @@ export function crewMemberSource(token: string, astronautId: number): HealthSour
       request<StatusResult>(`/api/admin/readings/${readingId}`, { token, method: 'PUT', body: { values } }),
     deleteReading: (readingId) =>
       request<{ message: string }>(`/api/admin/readings/${readingId}`, { token, method: 'DELETE' }).then(() => undefined),
+    createReading: null,
+  };
+}
+
+// Read-only health of one crew member, seen by the superadmin.
+export function superadminMemberSource(token: string, crewId: number, astronautId: number): HealthSource {
+  const base = `/api/superadmin/crews/${crewId}/members/${astronautId}`;
+  const readOnly = () => Promise.reject(new ApiError('This view is read-only.', 403));
+  return {
+    canEdit: false,
+    getStatus: () => request<StatusOverview>(`${base}/status`, { token }),
+    getChecklist: () => request<Checklist>(`${base}/checklist`, { token }),
+    getReadings: (indicatorId, days = 365) =>
+      request<Reading[]>(`${base}/readings?indicator=${encodeURIComponent(indicatorId)}&days=${days}`, { token }),
+    updateReading: readOnly,
+    deleteReading: readOnly,
     createReading: null,
   };
 }
@@ -215,4 +246,60 @@ export const adminApi = {
 
   deleteCrew: (token: string, astronautId: number) =>
     request<{ message: string }>(`/api/admin/astronauts/${astronautId}`, { token, method: 'DELETE' }),
+};
+
+// ---------- superadmin: crews and their mission control accounts ----------
+
+export interface Crew {
+  crewId: number;
+  name: string;
+  createdAt: string;
+  memberCount: number;
+  adminCount: number;
+}
+
+export interface CrewMemberInfo {
+  astronautId: number;
+  username: string;
+  sex: Sex | null;
+  createdAt: string;
+}
+
+export interface CrewAdmin {
+  astronautId: number;
+  username: string;
+  createdAt: string;
+}
+
+export const superadminApi = {
+  listCrews: (token: string) => request<Crew[]>('/api/superadmin/crews', { token }),
+
+  createCrew: (token: string, name: string) =>
+    request<Crew>('/api/superadmin/crews', { token, method: 'POST', body: { name } }),
+
+  deleteCrew: (token: string, crewId: number) =>
+    request<{ message: string }>(`/api/superadmin/crews/${crewId}`, { token, method: 'DELETE' }),
+
+  deleteMember: (token: string, crewId: number, astronautId: number) =>
+    request<{ message: string }>(`/api/superadmin/crews/${crewId}/members/${astronautId}`, { token, method: 'DELETE' }),
+
+  listCrewMembers: (token: string, crewId: number) =>
+    request<CrewMemberInfo[]>(`/api/superadmin/crews/${crewId}/members`, { token }),
+
+  resetMemberPassword: (token: string, crewId: number, astronautId: number, newPassword: string) =>
+    request<{ message: string }>(`/api/superadmin/crews/${crewId}/members/${astronautId}/password`, {
+      token,
+      method: 'POST',
+      body: { newPassword },
+    }),
+
+  listCrewAdmins: (token: string, crewId: number) =>
+    request<CrewAdmin[]>(`/api/superadmin/crews/${crewId}/admins`, { token }),
+
+  createCrewAdmin: (token: string, crewId: number, username: string, password: string) =>
+    request<Session>(`/api/superadmin/crews/${crewId}/admins`, {
+      token,
+      method: 'POST',
+      body: { username, password },
+    }),
 };

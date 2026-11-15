@@ -168,7 +168,7 @@ function LoginPage({ onLogin, notice }: LoginPageProps) {
         </div>
 
         {notice && !submitError && <p className="text-sm text-brand">{notice}</p>}
-        <p aria-live="polite" className="min-h-5 text-sm text-danger">
+        <p aria-live="polite" className="min-h-5 whitespace-pre-line text-sm text-danger">
           {submitError}
         </p>
 

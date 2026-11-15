@@ -266,7 +266,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-soft hover:bg-panel/10 border border-white/10 text-xs font-medium text-slate-200 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Crew list
+                Back
               </button>
             )}
             <button
@@ -460,7 +460,7 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
                                 Log
                               </button>
                             )}
-                            {latest && (
+                            {latest && source.canEdit && (
                               <>
                                 <button
                                   onClick={() => startCorrect(item, latest)}
