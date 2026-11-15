@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { HumanModel3D, MODEL_FILES, type BodySex } from './HumanModel3D';
 import type { BodyRegion, IndicationItem } from '../data/indicationGroups';
 import { RegionFilters } from './RegionFilters';
+// Code was assisted with Claude Code.
+import { HabitatView } from './HabitatView';
 
 // Props of the model panel: the crew member's sex (picks the model) and the indicator data.
 interface ModelPanelProps {
@@ -41,6 +43,25 @@ export function ModelPanel({ sex, items, selectedRegion, onSelectRegion }: Model
   }, [model]);
 
   const available = checked?.sex === model && checked.ok;
+
+  // The Habitat panel is the cabin, not the body: show the cabin view instead of the model.
+  // Code was assisted with Claude Code.
+  if (selectedRegion === 'Habitat panel') {
+    return (
+      <aside className="flex h-[70vh] flex-col rounded-2xl border border-white/10 bg-panel p-4 shadow-sm lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-brand-light">Habitat</span>
+        </div>
+        <p className="mb-3 text-[11px] text-slate-400">Cabin air and radiation, shown instead of the body model</p>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <HabitatView items={items} />
+        </div>
+        <div className="mt-3">
+          <RegionFilters items={items} selectedRegion={selectedRegion} onSelectRegion={onSelectRegion} />
+        </div>
+      </aside>
+    );
+  }
   if (!available) return null;
 
   return (
