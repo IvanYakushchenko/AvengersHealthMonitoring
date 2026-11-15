@@ -15,7 +15,7 @@ superadmin creates crews.
 ```
 backend/     Python API (FastAPI) with a PostgreSQL database and automated tests
 frontend/    Web app (React, TypeScript, Vite)
-scripts/     Scripts that install and run everything
+scripts/     Scripts that set up the database, install, run, and test everything
 ```
 
 ## Before you start
@@ -26,9 +26,10 @@ Install these once:
 |---|---|---|
 | Python | 3.10 or newer | https://www.python.org |
 | Node.js (includes npm) | 22 or newer | https://nodejs.org |
-| A PostgreSQL database | any | A free hosted one such as [Neon](https://neon.tech), or a local PostgreSQL |
+| A PostgreSQL database | 14 or newer | Your own computer (step 2, Option A) or a free hosted one such as [Neon](https://neon.tech) (Option B) |
 
-The scripts are written for macOS and Linux shells. On Windows, use Git Bash or WSL.
+The scripts are written for macOS and Linux shells. On Windows, use WSL (Ubuntu) so the
+scripts find the Python environment; Git Bash may not find it.
 
 ## 1. Get the code
 
@@ -109,6 +110,8 @@ venv/bin/python -m app.create_superadmin
 
 Then open http://localhost:5173 and log in with that username and password.
 
+Skip this step if you load the demo data below: it already creates a superadmin.
+
 Everyday flow after that:
 1. Superadmin creates a crew, then creates its mission control account.
 2. Mission control logs in and creates crew members (each with sex, which picks the 3D model).
@@ -119,8 +122,8 @@ Everyday flow after that:
 The demo adds a small crew with readings, so every screen has something to show. It is
 for demonstrations only: the passwords below are public.
 
-Use a **separate demo database**, never the one that holds real data. Set its address in
-`backend/.env` (`DATABASE_URL`), then run from the `backend` folder:
+Use a **separate demo database**, never the one that holds real data. The local database
+from step 2 (Option A) is ideal. Then run from the `backend` folder:
 
 ```bash
 cd backend
@@ -140,6 +143,15 @@ Each command prints the database host it changed.
 | Crew member (male) | `demo_max` | `demo-password-2026` |
 | Crew member (female) | `demo_lena` | `demo-password-2026` |
 
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `./scripts/setup-local-db.sh` | Creates a local database `avengers` and writes `backend/.env` (optional, Option A) |
+| `./scripts/setup.sh` | Installs the Python and npm packages |
+| `./scripts/run.sh` | Runs the backend and the web app |
+| `./scripts/test.sh` | Runs all tests and the production build |
+
 ## Running the tests
 
 ```bash
@@ -147,9 +159,9 @@ Each command prints the database host it changed.
 ```
 
 This runs the backend tests (against `TEST_DATABASE_URL`, or `DATABASE_URL` if that is
-not set), the frontend tests, and a production build. Use a **test database**: the
-backend tests create accounts named `test_...` and delete them afterwards, but they do
-write to the database.
+not set), the frontend tests, and a production build. The local database from step 2 works
+for the tests. The backend tests create accounts named `test_...` and delete them afterwards,
+but they do write to the database, so do not point them at real data.
 
 Run the tests before every commit.
 
@@ -162,7 +174,7 @@ Run the tests before every commit.
 
 | Setting | Where | Default |
 |---|---|---|
-| `DATABASE_URL` | `backend/.env` | (required) |
+| `DATABASE_URL` | `backend/.env` | (required; `setup-local-db.sh` writes it for a local database) |
 | `TEST_DATABASE_URL` | `backend/.env` | uses `DATABASE_URL` |
 | `CORS_ORIGINS` | `backend/.env` | `http://localhost:5173,http://127.0.0.1:5173` |
 | `VITE_API_URL` | `frontend/.env` (optional) | `http://localhost:8000` |
@@ -172,4 +184,6 @@ Run the tests before every commit.
 - **"Missing backend/.env"**: create the file as described in step 2.
 - **"Backend not available" in the web app**: the backend is not running. Start it with `./scripts/run.sh`, or check the terminal for an error (for example a wrong `DATABASE_URL`).
 - **Login fails with a database error**: check that `DATABASE_URL` is correct and that the database accepts connections.
+- **"PostgreSQL is not running"** (from `setup-local-db.sh`): start it, for example `brew services start postgresql@17` on macOS, then run the script again.
+- **"PostgreSQL is installed" is missing or the login fails**: the script logs in as your computer's user name. If your database needs a user and password, set `PGUSER` and `PGPASSWORD` before running it.
 - **Port already in use**: another program is using 5173 or 8000. Stop it, then run the script again.
