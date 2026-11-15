@@ -41,7 +41,7 @@ export function ModelPanel({ sex, items, selectedRegion, onSelectRegion }: Model
   if (!available) return null;
 
   return (
-    <aside className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col rounded-2xl border border-white/10 bg-panel p-4 shadow-sm">
+    <aside className="flex h-[70vh] flex-col rounded-2xl border border-white/10 bg-panel p-4 shadow-sm lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-[11px] font-mono uppercase tracking-wider text-brand-light">3D body model</span>
         <span className="rounded-md bg-ink-soft px-2 py-1 text-xs text-slate-300">{SEX_LABEL[model]}</span>

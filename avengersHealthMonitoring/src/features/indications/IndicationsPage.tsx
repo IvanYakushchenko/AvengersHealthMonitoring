@@ -506,7 +506,8 @@ export const IndicationsPage: React.FC<IndicationsPageProps> = ({
         </div>
 
         {/* Right Column: 3D body model, full height */}
-        <div className="lg:col-span-4">
+        {/* On phones the model comes first; on large screens it is the right-hand column. */}
+        <div className="order-first lg:order-none lg:col-span-4">
           <ModelPanel sex={sex} items={allItems} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
         </div>
       </main>
