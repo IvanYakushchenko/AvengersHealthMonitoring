@@ -727,5 +727,44 @@ class ApiTests(unittest.TestCase):
         self.assertNotIn(member_id, [m["astronautId"] for m in self.call("GET", f"/api/superadmin/crews/{self.crew_id}/members", token=self.superadmin_token)[1]])
 
 
+class DemoDataTests(unittest.TestCase):
+
+    # Seeds the demo crew, checks it, and removes it again. Skipped if demo data already exists,
+    # so it never removes a real demo crew by accident.
+    def test_demo_seed_and_reset(self):
+        from app import demo
+        database.init_db()
+        if database.get_astronaut_by_username(demo.DEMO_SUPERADMIN) is not None:
+            self.skipTest("demo data already exists in this database")
+        self.assertEqual(demo.main(["seed", "--demo"]), 0)
+        try:
+            with database.get_connection() as conn:
+                members = conn.execute(
+                    "SELECT count(*) AS n FROM astronauts WHERE username = ANY(%s)", (demo.DEMO_USERNAMES,)
+                ).fetchone()["n"]
+                readings = conn.execute(
+                    "SELECT count(*) AS n FROM readings r JOIN astronauts a ON a.id = r.astronaut_id WHERE a.username = ANY(%s)",
+                    (demo.DEMO_USERNAMES,),
+                ).fetchone()["n"]
+            self.assertEqual(members, 2 + len(demo.DEMO_MEMBERS))
+            self.assertGreater(readings, 0)
+            # Every seeded reading must be rated (inside the allowed limits).
+            rules = status_rules.load_rules()
+            with database.get_connection() as conn:
+                rows = conn.execute("SELECT indicator_id, reading_values FROM readings r JOIN astronauts a ON a.id = r.astronaut_id WHERE a.username = ANY(%s)", (demo.DEMO_USERNAMES,)).fetchall()
+            for row in rows:
+                self.assertIn(row["indicator_id"], rules["indicators"])
+                self.assertNotEqual(status_rules.rate_reading(row["indicator_id"], row["reading_values"])["status"], "unknown")
+        finally:
+            self.assertEqual(demo.main(["reset", "--demo"]), 0)
+        self.assertIsNone(database.get_astronaut_by_username(demo.DEMO_SUPERADMIN))
+        with database.get_connection() as conn:
+            self.assertIsNone(conn.execute("SELECT id FROM crews WHERE name = %s", (demo.DEMO_CREW,)).fetchone())
+
+    def test_demo_script_refuses_without_flag(self):
+        from app import demo
+        self.assertEqual(demo.main(["reset"]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

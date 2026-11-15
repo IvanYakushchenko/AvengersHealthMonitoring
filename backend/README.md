@@ -325,3 +325,7 @@ app/
     rules.json     all indicators, regions and numeric ranges (estimates)
 test_backend.py    automated tests (python -m unittest -v)
 ```
+
+## Demo data
+
+See the root README ("Demo data") for `python -m app.demo seed --demo` and `reset --demo`.

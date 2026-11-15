@@ -99,6 +99,32 @@ Everyday flow after that:
 2. Mission control logs in and creates crew members (each with sex, which picks the 3D model).
 3. Crew members log in, follow the tutorial on first login, and log their measurements (Manual) or let the simulated sensors fill them in (Auto).
 
+## Demo data (for presentations)
+
+The demo adds a small crew with readings, so every screen has something to show. It is
+for demonstrations only: the passwords below are public.
+
+Use a **separate demo database**, never the one that holds real data. Set its address in
+`backend/.env` (`DATABASE_URL`), then run from the `backend` folder:
+
+```bash
+cd backend
+venv/bin/python -m app.demo seed --demo     # create the demo crew and 14 days of readings
+venv/bin/python -m app.demo reset --demo    # remove the demo accounts and the demo crew
+```
+
+Both commands need `--demo`, so they cannot run by accident. Seeding stops if the demo
+data already exists. Reset removes only accounts named `demo_...` and the crew "Demo Crew".
+Each command prints the database host it changed.
+
+| Role | Username | Password |
+|---|---|---|
+| Superadmin | `demo_superadmin` | `demo-password-2026` |
+| Mission control of "Demo Crew" | `demo_control` | `demo-password-2026` |
+| Crew member (female) | `demo_anna` | `demo-password-2026` |
+| Crew member (male) | `demo_max` | `demo-password-2026` |
+| Crew member (female) | `demo_lena` | `demo-password-2026` |
+
 ## Running the tests
 
 ```bash
