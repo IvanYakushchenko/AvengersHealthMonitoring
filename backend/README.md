@@ -4,8 +4,8 @@ AvengersHealthMonitoring helps astronauts check their own health. They enter a m
 (heart rate, blood oxygen, sleep, ...) and get back a simple rating:
 **normal**, **caution** or **urgent**, plus a short message.
 
-This repo is the backend API. The React + TypeScript frontend lives in a
-separate repo.
+This folder is the backend API. The React + TypeScript frontend is in the
+`frontend/` folder of the same repository. To run the whole project, see the root README.
 
 > **Hackathon prototype, not a medical device.** The health ranges in
 > `app/data/rules.json` are estimated average ranges for healthy adults,
